@@ -1,0 +1,6 @@
+{
+  "name": "Monitoring Shift Kerja",
+  "description": "Aplikasi monitoring shift kerja untuk inspeksi kelistrikan UPS dan ACO (Tim Wapres dan Tim Rumdin) dengan generator format laporan WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
