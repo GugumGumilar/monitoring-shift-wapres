@@ -33,6 +33,7 @@ import {
   ArrowRight,
   ShieldAlert,
   Info,
+  RotateCcw,
 } from 'lucide-react';
 
 export default function App() {
@@ -155,6 +156,20 @@ export default function App() {
     showToast('Laporan riwayat telah dihapus', 'info');
   };
 
+  const handleResetActiveForm = () => {
+    if (selectedTeam === 'WAPRES') {
+      const blank = createDefaultWapresData();
+      setWapresData(blank);
+      saveDraftWapres(selectedDateKey, selectedShift, blank);
+      showToast('Formulir Tim Wapres berhasil dikosongkan.');
+    } else {
+      const blank = createDefaultRumdinData();
+      setRumdinData(blank);
+      saveDraftRumdin(selectedDateKey, selectedShift, blank);
+      showToast('Formulir Tim Rumdin berhasil dikosongkan.');
+    }
+  };
+
   const isWapresSubmitted = Boolean(currentReport?.wapres);
   const isRumdinSubmitted = Boolean(currentReport?.rumdin);
   const isBothSubmitted = isWapresSubmitted && isRumdinSubmitted;
@@ -220,6 +235,17 @@ export default function App() {
               <span>
                 Tim Rumdin: {isRumdinSubmitted ? `Selesai (${currentReport?.rumdin?.inspectionTime})` : 'Belum Submit'}
               </span>
+            </button>
+
+            {/* Quick reset active form button */}
+            <button
+              type="button"
+              onClick={handleResetActiveForm}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-200 bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/60 rounded-full transition-colors cursor-pointer ml-1"
+              title="Kosongkan nilai input pada tim aktif saat ini"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Kosongkan Form</span>
             </button>
           </div>
 

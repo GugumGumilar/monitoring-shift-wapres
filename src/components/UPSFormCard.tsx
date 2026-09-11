@@ -1,6 +1,6 @@
 import React from 'react';
 import { UPSData } from '../types';
-import { Zap, Thermometer, Bell, Clock, FileText, Sparkles } from 'lucide-react';
+import { Zap, Thermometer, Bell, Clock, FileText, Sparkles, RotateCcw } from 'lucide-react';
 
 interface UPSFormCardProps {
   id: string;
@@ -19,9 +19,6 @@ export const UPSFormCard: React.FC<UPSFormCardProps> = ({
   subTitle,
   data,
   onChange,
-  defaultLoads,
-  defaultBackupHours,
-  defaultBackupMinutes,
 }) => {
   const updateField = (field: keyof UPSData, value: string) => {
     onChange({
@@ -30,12 +27,28 @@ export const UPSFormCard: React.FC<UPSFormCardProps> = ({
     });
   };
 
+  const handleClearUPS = () => {
+    onChange({
+      ...data,
+      loadR: '',
+      loadS: '',
+      loadT: '',
+      voltRN: '',
+      voltSN: '',
+      voltTN: '',
+      voltRS: '',
+      voltRT: '',
+      voltST: '',
+      temperature: '',
+      alarm: 'NORMAL',
+      backupHours: '',
+      backupMinutes: '',
+    });
+  };
+
   const handleFillNominal = () => {
     onChange({
       ...data,
-      loadR: data.loadR || (defaultLoads?.r ?? '3.0'),
-      loadS: data.loadS || (defaultLoads?.s ?? '3.0'),
-      loadT: data.loadT || (defaultLoads?.t ?? '3.0'),
       voltRN: '220',
       voltSN: '220',
       voltTN: '220',
@@ -44,9 +57,6 @@ export const UPSFormCard: React.FC<UPSFormCardProps> = ({
       voltST: '380',
       temperature: data.temperature || '25',
       alarm: 'NORMAL',
-      backupHours: data.backupHours || (defaultBackupHours ?? '10'),
-      backupMinutes: data.backupMinutes || (defaultBackupMinutes ?? '0'),
-      keterangan: data.keterangan || '-',
     });
   };
 
@@ -64,15 +74,26 @@ export const UPSFormCard: React.FC<UPSFormCardProps> = ({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleFillNominal}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg transition-colors"
-          title="Isi tegangan standar (220V/380V) dan temperatur nominal"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          Isi Nominal Standar
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleClearUPS}
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-zinc-400 hover:text-zinc-200 bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/60 rounded-lg transition-colors cursor-pointer"
+            title="Kosongkan semua inputan pada UPS ini"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Kosongkan
+          </button>
+          <button
+            type="button"
+            onClick={handleFillNominal}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg transition-colors cursor-pointer"
+            title="Bantu isi nominal tegangan standar 220V/380V"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Isi Tegangan Standar
+          </button>
+        </div>
       </div>
 
       {/* Beban UPS (A) */}

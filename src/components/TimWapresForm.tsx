@@ -444,9 +444,6 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         subTitle="SetWapres Gardu D 126"
         data={data.ups30}
         onChange={(ups30) => onChange({ ...data, ups30 })}
-        defaultLoads={{ r: '3.1', s: '7.4', t: '8' }}
-        defaultBackupHours="13"
-        defaultBackupMinutes="0"
       />
 
       {/* 4. UPS 40 KVA */}
@@ -456,9 +453,6 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         subTitle="SetWapres Gardu D 126"
         data={data.ups40}
         onChange={(ups40) => onChange({ ...data, ups40 })}
-        defaultLoads={{ r: '8.4', s: '10.5', t: '9' }}
-        defaultBackupHours="0"
-        defaultBackupMinutes="0"
       />
 
       {/* 5. UPS 60 KVA */}
@@ -468,9 +462,6 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         subTitle="SetWapres Gardu D 126"
         data={data.ups60}
         onChange={(ups60) => onChange({ ...data, ups60 })}
-        defaultLoads={{ r: '1.4', s: '1.7', t: '0.5' }}
-        defaultBackupHours="16"
-        defaultBackupMinutes="49"
       />
 
       {/* Submit Button */}

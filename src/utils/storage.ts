@@ -9,10 +9,7 @@ export function getAllReports(): CombinedShiftReport[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_REPORTS);
     if (!raw) {
-      // Seed with sample report if completely empty so users immediately have an example
-      const initial = [generateSampleReport('MALAM')];
-      localStorage.setItem(STORAGE_KEY_REPORTS, JSON.stringify(initial));
-      return initial;
+      return [];
     }
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];

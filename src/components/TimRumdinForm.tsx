@@ -477,9 +477,6 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
         subTitle="Rumah Dinas Wapres (Dipo)"
         data={data.ups40Dipo}
         onChange={(ups40Dipo) => onChange({ ...data, ups40Dipo })}
-        defaultLoads={{ r: '2.0', s: '2.0', t: '0.7' }}
-        defaultBackupHours="0"
-        defaultBackupMinutes="0"
       />
 
       {/* 5. UPS 100 KVA Rumdin (ST12) */}
@@ -489,9 +486,6 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
         subTitle="Rumah Dinas Wapres (ST12)"
         data={data.ups100ST12}
         onChange={(ups100ST12) => onChange({ ...data, ups100ST12 })}
-        defaultLoads={{ r: '16.3', s: '5.9', t: '22.1' }}
-        defaultBackupHours="9"
-        defaultBackupMinutes="43"
       />
 
       {/* Submit Button */}
