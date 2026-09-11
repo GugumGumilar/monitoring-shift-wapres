@@ -68,6 +68,22 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleSwitchAccount = async () => {
+    try {
+      setLoadingAction('switch_account');
+      setErrorMessage(null);
+      setSuccessMessage(null);
+      await onSignOut();
+      await onSignIn();
+    } catch (err: any) {
+      if (err?.code !== 'auth/popup-closed-by-user') {
+        setErrorMessage(err.message || 'Gagal beralih akun Google.');
+      }
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
   const handleCreateNew = async () => {
     if (!accessToken) {
       setErrorMessage('Silakan login dengan akun Google terlebih dahulu.');
@@ -216,14 +232,27 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
 
               <div>
                 {user && accessToken ? (
-                  <button
-                    type="button"
-                    onClick={onSignOut}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition-colors"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Keluar</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSwitchAccount}
+                      disabled={loadingAction === 'switch_account'}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-colors cursor-pointer"
+                      title="Beralih ke akun Google lain"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingAction === 'switch_account' ? 'animate-spin' : ''}`} />
+                      <span>Ganti Akun</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onSignOut}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition-colors cursor-pointer"
+                      title="Keluar dari akun Google saat ini"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Keluar</span>
+                    </button>
+                  </div>
                 ) : (
                   <button
                     type="button"
@@ -251,6 +280,18 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
                     <span>Masuk dengan Google</span>
                   </button>
                 )}
+              </div>
+            </div>
+
+            {/* Tips for other accounts */}
+            <div className="mt-3 pt-3 border-t border-zinc-800/80 text-[11px] text-zinc-400 flex items-start gap-2">
+              <span className="text-amber-400 text-xs shrink-0">💡</span>
+              <div>
+                <span className="text-zinc-300 font-medium">Ingin menggunakan akun Google lain atau spreadsheet milik orang lain?</span>
+                <p className="mt-0.5 text-zinc-400 leading-relaxed">
+                  1. Klik <strong>"Ganti Akun"</strong> untuk login dengan email Google yang berbeda.<br />
+                  2. Jika spreadsheet berada di akun lain, pastikan pemilik file telah membagikan akses (<strong>Share</strong>) dengan izin <strong>Editor</strong> ke email yang sedang Anda pakai.
+                </p>
               </div>
             </div>
           </div>

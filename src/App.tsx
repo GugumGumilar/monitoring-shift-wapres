@@ -269,11 +269,10 @@ export default function App() {
     }
     try {
       setIsSyncingSheets(true);
-      const targetSheet = activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS';
       await appendRumdinUpsRecords(
         accessToken,
         activeSpreadsheet.id,
-        targetSheet,
+        activeSpreadsheet.sheetTabs || activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS',
         rumdinData
       );
       showToast('⚡ Beban UPS Rumdin (Dipo & ST12) berhasil dikirim ke Google Sheets!');
@@ -292,11 +291,10 @@ export default function App() {
     }
     try {
       setIsSyncingSheets(true);
-      const targetSheet = activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS';
       await appendWapresUpsRecords(
         accessToken,
         activeSpreadsheet.id,
-        targetSheet,
+        activeSpreadsheet.sheetTabs || activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS',
         wapresData
       );
       showToast('⚡ Beban UPS Wapres (30, 40, 60 KVA) berhasil dikirim ke Google Sheets!');
