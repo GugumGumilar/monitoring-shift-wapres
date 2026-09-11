@@ -19,12 +19,22 @@ import {
   submitRumdinToShift,
   submitWapresToShift,
   deleteReport,
+  saveReport,
 } from './utils/storage';
 import { Header } from './components/Header';
 import { TimWapresForm } from './components/TimWapresForm';
 import { TimRumdinForm } from './components/TimRumdinForm';
 import { ReportPreviewModal } from './components/ReportPreviewModal';
 import { HistoryModal } from './components/HistoryModal';
+import { GoogleSheetsModal } from './components/GoogleSheetsModal';
+import { User } from 'firebase/auth';
+import { initAuth, googleSignIn, logout, auth } from './services/googleAuth';
+import {
+  ActiveSpreadsheetInfo,
+  getStoredSpreadsheet,
+  saveStoredSpreadsheet,
+  appendAcoWapresRecord,
+} from './services/googleSheets';
 import {
   CheckCircle2,
   AlertCircle,
@@ -44,6 +54,18 @@ export default function App() {
 
   // Reports state
   const [allReports, setAllReports] = useState<CombinedShiftReport[]>(() => getAllReports());
+
+  // Google Auth & Sheets states
+  const [currentUser, setCurrentUser] = useState<User | null>(() => auth.currentUser);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [activeSpreadsheet, setActiveSpreadsheet] = useState<ActiveSpreadsheetInfo | null>(() =>
+    getStoredSpreadsheet()
+  );
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('monitoring_aco_auto_sync') !== 'false';
+  });
+  const [isSheetsModalOpen, setIsSheetsModalOpen] = useState<boolean>(false);
+  const [isSyncingSheets, setIsSyncingSheets] = useState<boolean>(false);
 
   // Current active combined report
   const currentReport = useMemo(() => {
@@ -72,6 +94,20 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(
     null
   );
+
+  // Firebase auth state listener
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (u, token) => {
+        setCurrentUser(u);
+        setAccessToken(token);
+      },
+      () => {
+        setCurrentUser(auth.currentUser);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
   // Sync forms when selected shift or report changes
   useEffect(() => {
@@ -112,11 +148,96 @@ export default function App() {
     }
   };
 
+  // Google Sheets & Auth Actions
+  const handleGoogleSignIn = async () => {
+    try {
+      const res = await googleSignIn();
+      setCurrentUser(res.user);
+      setAccessToken(res.accessToken);
+      showToast(`✅ Berhasil masuk sebagai ${res.user.email}`);
+    } catch (err: any) {
+      showToast(`Gagal login Google: ${err.message}`, 'info');
+    }
+  };
+
+  const handleGoogleSignOut = async () => {
+    try {
+      await logout();
+      setCurrentUser(null);
+      setAccessToken(null);
+      showToast('Telah keluar dari akun Google.');
+    } catch (err: any) {
+      showToast(`Gagal logout: ${err.message}`, 'info');
+    }
+  };
+
+  const handleSpreadsheetUpdated = (info: ActiveSpreadsheetInfo | null) => {
+    setActiveSpreadsheet(info);
+    saveStoredSpreadsheet(info);
+  };
+
+  const handleToggleAutoSync = (enabled: boolean) => {
+    setAutoSyncEnabled(enabled);
+    localStorage.setItem('monitoring_aco_auto_sync', enabled ? 'true' : 'false');
+    showToast(
+      enabled
+        ? 'Real-Time Sync Aktif: Data ACO otomatis masuk ke Google Sheets saat submit.'
+        : 'Real-Time Sync Google Sheets dinonaktifkan.',
+      'info'
+    );
+  };
+
+  const handleQuickSyncAco = async () => {
+    if (!accessToken) {
+      setIsSheetsModalOpen(true);
+      return;
+    }
+    if (!activeSpreadsheet) {
+      setIsSheetsModalOpen(true);
+      return;
+    }
+
+    try {
+      setIsSyncingSheets(true);
+      await appendAcoWapresRecord(
+        accessToken,
+        activeSpreadsheet.id,
+        activeSpreadsheet.sheetName,
+        wapresData
+      );
+      showToast('📊 Status ACO TM Gardu D 126 berhasil dikirim ke Google Sheets!');
+    } catch (err: any) {
+      console.error('Quick sync error:', err);
+      showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
+    } finally {
+      setIsSyncingSheets(false);
+    }
+  };
+
   // Submission handlers
-  const handleWapresSubmit = (submittedData: TimWapresReport) => {
+  const handleWapresSubmit = async (submittedData: TimWapresReport) => {
     const updatedReport = submitWapresToShift(selectedDateKey, selectedShift, submittedData);
     setAllReports(getAllReports());
     showToast(`✅ Laporan Tim Wapres berhasil disimpan pada ${submittedData.inspectionTime}!`);
+
+    // Real-time synchronization to Google Sheets
+    if (accessToken && activeSpreadsheet && autoSyncEnabled) {
+      try {
+        setIsSyncingSheets(true);
+        await appendAcoWapresRecord(
+          accessToken,
+          activeSpreadsheet.id,
+          activeSpreadsheet.sheetName,
+          submittedData
+        );
+        showToast('📊 Data ACO TM otomatis terinput ke baris Google Sheets!');
+      } catch (err: any) {
+        console.error('Auto sync to Google Sheets failed:', err);
+        showToast(`⚠️ Laporan disimpan lokal. Sync Sheets gagal: ${err.message}`, 'info');
+      } finally {
+        setIsSyncingSheets(false);
+      }
+    }
 
     // If Rumdin hasn't submitted yet, prompt to fill Rumdin or view report
     if (!updatedReport.rumdin) {
@@ -170,6 +291,30 @@ export default function App() {
     }
   };
 
+  const handleRefreshReportTimestamp = () => {
+    const now = new Date();
+    const curDate = formatIndonesianDate(now);
+    const curTime = formatIndonesianTime(now);
+
+    if (currentReport) {
+      if (currentReport.wapres) {
+        currentReport.wapres.inspectionDate = curDate;
+        currentReport.wapres.inspectionTime = curTime;
+        setWapresData({ ...currentReport.wapres });
+      }
+      if (currentReport.rumdin) {
+        currentReport.rumdin.inspectionDate = curDate;
+        currentReport.rumdin.inspectionTime = curTime;
+        setRumdinData({ ...currentReport.rumdin });
+      }
+      currentReport.displayDate = curDate;
+      currentReport.updatedAt = now.toISOString();
+      saveReport(currentReport);
+      setAllReports(getAllReports());
+      showToast(`Waktu laporan WA disinkronkan ke jam sekarang: ${curTime}`);
+    }
+  };
+
   const isWapresSubmitted = Boolean(currentReport?.wapres);
   const isRumdinSubmitted = Boolean(currentReport?.rumdin);
   const isBothSubmitted = isWapresSubmitted && isRumdinSubmitted;
@@ -188,6 +333,8 @@ export default function App() {
         onOpenHistory={() => setIsHistoryOpen(true)}
         onLoadSample={handleLoadSample}
         historyCount={allReports.length}
+        onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
+        isSheetsConnected={Boolean(currentUser && activeSpreadsheet)}
       />
 
       {/* Main Content Area */}
@@ -254,7 +401,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsPreviewOpen(true)}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md shadow-emerald-950"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md shadow-emerald-950 cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Laporan Siap Kirim WA</span>
@@ -276,6 +423,12 @@ export default function App() {
             onSubmit={handleWapresSubmit}
             shiftName={selectedShift}
             isAlreadySubmitted={isWapresSubmitted}
+            user={currentUser}
+            activeSpreadsheet={activeSpreadsheet}
+            autoSyncEnabled={autoSyncEnabled}
+            onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
+            onQuickSyncAcoToSheets={handleQuickSyncAco}
+            isSyncingSheets={isSyncingSheets}
           />
         ) : (
           <TimRumdinForm
@@ -294,7 +447,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setIsPreviewOpen(true)}
-            className="p-3.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-xl shadow-emerald-950 flex items-center justify-center animate-bounce"
+            className="p-3.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-xl shadow-emerald-950 flex items-center justify-center animate-bounce cursor-pointer"
             title="Kirim ke WhatsApp"
           >
             <Send className="w-5 h-5" />
@@ -315,6 +468,9 @@ export default function App() {
         report={currentReport}
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
+        onRefreshTimestamp={handleRefreshReportTimestamp}
+        onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
+        activeSpreadsheet={activeSpreadsheet}
       />
 
       <HistoryModal
@@ -328,6 +484,21 @@ export default function App() {
           setIsPreviewOpen(true);
         }}
         onDeleteReport={handleDeleteReport}
+      />
+
+      {/* Google Sheets Modal */}
+      <GoogleSheetsModal
+        isOpen={isSheetsModalOpen}
+        onClose={() => setIsSheetsModalOpen(false)}
+        user={currentUser}
+        accessToken={accessToken}
+        activeSpreadsheet={activeSpreadsheet}
+        onSignIn={handleGoogleSignIn}
+        onSignOut={handleGoogleSignOut}
+        onSpreadsheetUpdated={handleSpreadsheetUpdated}
+        autoSyncEnabled={autoSyncEnabled}
+        onToggleAutoSync={handleToggleAutoSync}
+        onManualSyncCurrent={handleQuickSyncAco}
       />
     </div>
   );

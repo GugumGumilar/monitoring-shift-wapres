@@ -11,6 +11,7 @@ import {
   Building,
   Radio,
   CheckCircle2,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { formatIndonesianDate, formatIndonesianTime } from '../utils/formatters';
 
@@ -25,6 +26,8 @@ interface HeaderProps {
   onOpenHistory: () => void;
   onLoadSample: () => void;
   historyCount: number;
+  onOpenGoogleSheets: () => void;
+  isSheetsConnected: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -38,6 +41,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenHistory,
   onLoadSample,
   historyCount,
+  onOpenGoogleSheets,
+  isSheetsConnected,
 }) => {
   const [currentTime, setCurrentTime] = useState<string>(formatIndonesianTime());
   const [currentDate, setCurrentDate] = useState<string>(formatIndonesianDate());
@@ -99,6 +104,25 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               <span className="hidden sm:inline">Contoh</span> Demo
+            </button>
+
+            {/* Google Sheets Sync Button */}
+            <button
+              type="button"
+              id="btn-header-sheets"
+              onClick={onOpenGoogleSheets}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                isSheetsConnected
+                  ? 'bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/40 shadow-xs'
+                  : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
+              }`}
+              title="Kelola Integrasi Real-Time Google Sheets (ACO Wapres)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Google Sheets</span>
+              {isSheetsConnected && (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              )}
             </button>
 
             {/* Riwayat Button */}

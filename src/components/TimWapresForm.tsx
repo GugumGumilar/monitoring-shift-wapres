@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AcoTMData, ACO_TM_PENYULANG_OPTIONS, TimWapresReport } from '../types';
 import { OfficerSelect } from './OfficerSelect';
 import { UPSFormCard } from './UPSFormCard';
+import { GoogleSheetsSyncBar } from './GoogleSheetsSyncBar';
+import { ActiveSpreadsheetInfo } from '../services/googleSheets';
+import { User } from 'firebase/auth';
 import { formatIndonesianDate, formatIndonesianTime } from '../utils/formatters';
 import {
   Radio,
@@ -11,6 +14,9 @@ import {
   AlertTriangle,
   ArrowLeftRight,
   Check,
+  Clock,
+  Calendar,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface TimWapresFormProps {
@@ -19,6 +25,12 @@ interface TimWapresFormProps {
   onSubmit: (data: TimWapresReport) => void;
   shiftName: string;
   isAlreadySubmitted?: boolean;
+  user?: User | null;
+  activeSpreadsheet?: ActiveSpreadsheetInfo | null;
+  autoSyncEnabled?: boolean;
+  onOpenGoogleSheets?: () => void;
+  onQuickSyncAcoToSheets?: () => void;
+  isSyncingSheets?: boolean;
 }
 
 export const TimWapresForm: React.FC<TimWapresFormProps> = ({
@@ -27,7 +39,24 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
   onSubmit,
   shiftName,
   isAlreadySubmitted = false,
+  user = null,
+  activeSpreadsheet = null,
+  autoSyncEnabled = true,
+  onOpenGoogleSheets,
+  onQuickSyncAcoToSheets,
+  isSyncingSheets = false,
 }) => {
+  const [liveTime, setLiveTime] = useState<string>(formatIndonesianTime());
+  const [liveDate, setLiveDate] = useState<string>(formatIndonesianDate());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveTime(formatIndonesianTime());
+      setLiveDate(formatIndonesianDate());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const updateAcoTM = (field: keyof AcoTMData, value: any) => {
     onChange({
       ...data,
@@ -56,11 +85,15 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
       return;
     }
 
+    const now = new Date();
+    const realTimeDate = formatIndonesianDate(now);
+    const realTimeTime = formatIndonesianTime(now);
+
     const updated: TimWapresReport = {
       ...data,
-      inspectionDate: data.inspectionDate || formatIndonesianDate(),
-      inspectionTime: formatIndonesianTime(), // automatically timestamp inspection time
-      submittedAt: new Date().toISOString(),
+      inspectionDate: realTimeDate,
+      inspectionTime: realTimeTime,
+      submittedAt: now.toISOString(),
     };
     onSubmit(updated);
   };
@@ -79,10 +112,20 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
           <h2 className="text-lg font-bold text-zinc-100 mt-0.5">
             Pantauan UPS Dan ACO TM Gardu D 126 SetWapres
           </h2>
-          <p className="text-xs text-zinc-400">
-            Shift: <span className="font-semibold text-emerald-300">{shiftName}</span> | Waktu Real-Time:{' '}
-            <span className="font-mono text-zinc-300">{formatIndonesianDate()}</span>
-          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-zinc-400">
+            <span>Shift: <strong className="text-emerald-300 font-semibold">{shiftName}</strong></span>
+            <span className="text-zinc-600">•</span>
+            <span className="inline-flex items-center gap-1 text-zinc-300">
+              <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{liveDate}</span>
+            </span>
+            <span className="text-zinc-600">•</span>
+            <span className="inline-flex items-center gap-1 text-emerald-300 font-mono font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
+              <Clock className="w-3 h-3 text-emerald-400 animate-pulse" />
+              <span>{liveTime}</span>
+              <span className="text-[10px] text-zinc-400 font-normal ml-0.5">(Real-Time)</span>
+            </span>
+          </div>
         </div>
 
         {isAlreadySubmitted && (
@@ -93,6 +136,18 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         )}
       </div>
 
+      {/* Google Sheets Real-Time Status Bar */}
+      {onOpenGoogleSheets && (
+        <GoogleSheetsSyncBar
+          user={user}
+          activeSpreadsheet={activeSpreadsheet}
+          autoSyncEnabled={autoSyncEnabled}
+          onOpenSettings={onOpenGoogleSheets}
+          onQuickSync={onQuickSyncAcoToSheets || (() => {})}
+          isSyncing={isSyncingSheets}
+        />
+      )}
+
       {/* 1. Officer Selection */}
       <OfficerSelect
         selectedOfficers={data.officers}
@@ -102,13 +157,39 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
 
       {/* 2. ACO TM Gardu D 126 SetWapres */}
       <div id="aco-tm-card" className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 md:p-5 space-y-4 shadow-sm">
-        <div className="flex items-center gap-2.5 border-b border-zinc-800 pb-3">
-          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <Radio className="w-5 h-5" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-zinc-800 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <Radio className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-zinc-100 text-base">Pantauan ACO TM Gardu D 126 SetWapres</h3>
+                {activeSpreadsheet && (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Sheets Terhubung
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-zinc-400">Status penyulang, alarm, remote, dan indikator kubikel</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-zinc-100 text-base">Pantauan ACO TM Gardu D 126 SetWapres</h3>
-            <p className="text-xs text-zinc-400">Status penyulang, alarm, remote, dan indikator kubikel</p>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            {onQuickSyncAcoToSheets && (
+              <button
+                type="button"
+                id="btn-quick-sync-aco"
+                onClick={onQuickSyncAcoToSheets}
+                disabled={isSyncingSheets}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 transition-colors cursor-pointer shadow-xs"
+                title="Kirim status ACO TM ini ke Google Spreadsheet secara langsung"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{isSyncingSheets ? 'Mengirim...' : 'Kirim Data ke Sheets'}</span>
+              </button>
+            )}
           </div>
         </div>
 

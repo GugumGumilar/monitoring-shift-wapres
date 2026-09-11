@@ -22,6 +22,13 @@ export function formatIndonesianDate(date: Date = new Date()): string {
   return `${day} ${month} ${year}`;
 }
 
+export function formatDDMMYYYY(date: Date = new Date()): string {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 export function formatIndonesianTime(date: Date = new Date()): string {
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
@@ -147,9 +154,9 @@ export function generateWhatsAppReport(report: CombinedShiftReport): string {
     parts.push('Nama petugas :');
     parts.push(officersStr || '-');
     parts.push('Tanggal :');
-    parts.push(w.inspectionDate || report.displayDate);
+    parts.push(w.inspectionDate || report.displayDate || formatIndonesianDate());
     parts.push('Jam Inspeksi :');
-    parts.push(w.inspectionTime || '-');
+    parts.push(w.inspectionTime || formatIndonesianTime());
 
     // UPS 30 KVA
     parts.push('======================');
@@ -266,9 +273,9 @@ export function generateWhatsAppReport(report: CombinedShiftReport): string {
     parts.push('Nama Petugas :');
     parts.push(officersStr || '-');
     parts.push('Tanggal :');
-    parts.push(r.inspectionDate || report.displayDate);
+    parts.push(r.inspectionDate || report.displayDate || formatIndonesianDate());
     parts.push('Jam Inspeksi :');
-    parts.push(r.inspectionTime || '-');
+    parts.push(r.inspectionTime || formatIndonesianTime());
 
     // ACO TR Rumdin Wapres (Dipo)
     parts.push('=========================');

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CombinedShiftReport } from '../types';
-import { generateWhatsAppReport } from '../utils/formatters';
+import { generateWhatsAppReport, formatIndonesianTime } from '../utils/formatters';
+import { ActiveSpreadsheetInfo } from '../services/googleSheets';
 import {
   X,
   Share2,
@@ -11,18 +12,28 @@ import {
   CheckCircle2,
   Send,
   MessageSquare,
+  Clock,
+  RotateCw,
+  FileSpreadsheet,
+  ExternalLink,
 } from 'lucide-react';
 
 interface ReportPreviewModalProps {
   report: CombinedShiftReport;
   isOpen: boolean;
   onClose: () => void;
+  onRefreshTimestamp?: () => void;
+  onOpenGoogleSheets?: () => void;
+  activeSpreadsheet?: ActiveSpreadsheetInfo | null;
 }
 
 export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
   report,
   isOpen,
   onClose,
+  onRefreshTimestamp,
+  onOpenGoogleSheets,
+  activeSpreadsheet,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -107,7 +118,7 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
               }`}
             >
               {isWapresComplete ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-              Tim Wapres: {isWapresComplete ? `Selesai (${report.wapres?.officers.join(', ')})` : 'Belum Submit'}
+              Tim Wapres: {isWapresComplete ? `Selesai (${report.wapres?.inspectionTime || '-'})` : 'Belum Submit'}
             </span>
 
             <span
@@ -118,11 +129,23 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
               }`}
             >
               {isRumdinComplete ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-              Tim Rumdin: {isRumdinComplete ? `Selesai (${report.rumdin?.officers.join(', ')})` : 'Belum Submit'}
+              Tim Rumdin: {isRumdinComplete ? `Selesai (${report.rumdin?.inspectionTime || '-'})` : 'Belum Submit'}
             </span>
           </div>
 
-          <div>
+          <div className="flex items-center gap-2">
+            {onRefreshTimestamp && (
+              <button
+                type="button"
+                onClick={onRefreshTimestamp}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg transition-colors cursor-pointer"
+                title="Perbarui jam inspeksi di teks laporan WA ke jam sekarang saat ini"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+                <span>Perbarui Jam Sekarang</span>
+              </button>
+            )}
+
             {isBothComplete ? (
               <span className="text-xs text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
                 ✅ Siap Kirim (Kedua Tim Lengkap)
@@ -173,6 +196,19 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
             >
               <Download className="w-4 h-4" />
             </button>
+
+            {onOpenGoogleSheets && (
+              <button
+                type="button"
+                id="modal-sheets-btn"
+                onClick={onOpenGoogleSheets}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-emerald-400 border border-emerald-500/30 transition-colors cursor-pointer"
+                title="Lihat / Kelola Spreadsheet Pantauan ACO"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span className="hidden sm:inline">Google Sheets</span>
+              </button>
+            )}
           </div>
 
           <button

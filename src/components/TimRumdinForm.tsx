@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AcoTRDipoData, AcoTRST12Data, TimRumdinReport } from '../types';
 import { OfficerSelect } from './OfficerSelect';
 import { UPSFormCard } from './UPSFormCard';
 import { formatIndonesianDate, formatIndonesianTime } from '../utils/formatters';
-import { Power, ShieldCheck, CheckCircle2, AlertTriangle, Building2 } from 'lucide-react';
+import { Power, ShieldCheck, CheckCircle2, AlertTriangle, Building2, Clock, Calendar } from 'lucide-react';
 
 interface TimRumdinFormProps {
   data: TimRumdinReport;
@@ -20,6 +20,17 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
   shiftName,
   isAlreadySubmitted = false,
 }) => {
+  const [liveTime, setLiveTime] = useState<string>(formatIndonesianTime());
+  const [liveDate, setLiveDate] = useState<string>(formatIndonesianDate());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveTime(formatIndonesianTime());
+      setLiveDate(formatIndonesianDate());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const updateAcoDipo = (field: keyof AcoTRDipoData, value: any) => {
     onChange({
       ...data,
@@ -95,11 +106,15 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
       return;
     }
 
+    const now = new Date();
+    const realTimeDate = formatIndonesianDate(now);
+    const realTimeTime = formatIndonesianTime(now);
+
     const updated: TimRumdinReport = {
       ...data,
-      inspectionDate: data.inspectionDate || formatIndonesianDate(),
-      inspectionTime: formatIndonesianTime(),
-      submittedAt: new Date().toISOString(),
+      inspectionDate: realTimeDate,
+      inspectionTime: realTimeTime,
+      submittedAt: now.toISOString(),
     };
     onSubmit(updated);
   };
@@ -118,10 +133,20 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
           <h2 className="text-lg font-bold text-zinc-100 mt-0.5">
             Pantauan UPS Dan ACO TR Rumdin Wapres (Dipo & ST12)
           </h2>
-          <p className="text-xs text-zinc-400">
-            Shift: <span className="font-semibold text-blue-300">{shiftName}</span> | Waktu Real-Time:{' '}
-            <span className="font-mono text-zinc-300">{formatIndonesianDate()}</span>
-          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-zinc-400">
+            <span>Shift: <strong className="text-blue-300 font-semibold">{shiftName}</strong></span>
+            <span className="text-zinc-600">•</span>
+            <span className="inline-flex items-center gap-1 text-zinc-300">
+              <Calendar className="w-3.5 h-3.5 text-blue-400" />
+              <span>{liveDate}</span>
+            </span>
+            <span className="text-zinc-600">•</span>
+            <span className="inline-flex items-center gap-1 text-blue-300 font-mono font-bold bg-blue-950/60 px-2 py-0.5 rounded border border-blue-500/30">
+              <Clock className="w-3 h-3 text-blue-400 animate-pulse" />
+              <span>{liveTime}</span>
+              <span className="text-[10px] text-zinc-400 font-normal ml-0.5">(Real-Time)</span>
+            </span>
+          </div>
         </div>
 
         {isAlreadySubmitted && (
