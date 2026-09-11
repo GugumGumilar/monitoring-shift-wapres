@@ -12,6 +12,8 @@ import {
   Radio,
   CheckCircle2,
   FileSpreadsheet,
+  Bell,
+  Table,
 } from 'lucide-react';
 import { formatIndonesianDate, formatIndonesianTime } from '../utils/formatters';
 
@@ -28,6 +30,8 @@ interface HeaderProps {
   historyCount: number;
   onOpenGoogleSheets: () => void;
   isSheetsConnected: boolean;
+  onOpenShiftSchedule: () => void;
+  onOpenSheetTable?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -43,6 +47,8 @@ export const Header: React.FC<HeaderProps> = ({
   historyCount,
   onOpenGoogleSheets,
   isSheetsConnected,
+  onOpenShiftSchedule,
+  onOpenSheetTable,
 }) => {
   const [currentTime, setCurrentTime] = useState<string>(formatIndonesianTime());
   const [currentDate, setCurrentDate] = useState<string>(formatIndonesianDate());
@@ -106,6 +112,18 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden sm:inline">Contoh</span> Demo
             </button>
 
+            {/* Jadwal & Alarm Pergantian Shift */}
+            <button
+              type="button"
+              id="btn-shift-schedule"
+              onClick={onOpenShiftSchedule}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-amber-300 border border-amber-500/30 transition-colors"
+              title="Jadwal Shift & Peringatan Handover Otomatis"
+            >
+              <Bell className="w-3.5 h-3.5 text-amber-400" />
+              <span>Jadwal Shift</span>
+            </button>
+
             {/* Google Sheets Sync Button */}
             <button
               type="button"
@@ -124,6 +142,20 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               )}
             </button>
+
+            {/* Format Sheet Official Preview Button */}
+            {onOpenSheetTable && (
+              <button
+                type="button"
+                id="btn-header-format-sheet"
+                onClick={onOpenSheetTable}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all shadow-xs"
+                title="Lihat Format Tabel Google Sheets (Persis Standar Resmi)"
+              >
+                <Table className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Format</span> Sheet
+              </button>
+            )}
 
             {/* Riwayat Button */}
             <button

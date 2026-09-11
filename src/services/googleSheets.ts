@@ -1,4 +1,4 @@
-import { TimWapresReport, TimRumdinReport, UPSData } from '../types';
+import { TimWapresReport, TimRumdinReport, UPSData, ShiftType } from '../types';
 
 export interface SheetTabMapping {
   acoTM?: string;
@@ -56,14 +56,71 @@ export function extractSpreadsheetId(input: string): string | null {
 }
 
 export function formatToDDMMYYYY(dateStrOrObj?: string | Date): string {
-  const date = dateStrOrObj instanceof Date ? dateStrOrObj : new Date();
-  if (typeof dateStrOrObj === 'string' && dateStrOrObj.includes('/')) {
-    return dateStrOrObj;
+  if (typeof dateStrOrObj === 'string') {
+    const trimmed = dateStrOrObj.trim();
+    if (trimmed.includes('/')) return trimmed;
+    if (trimmed.includes('-')) {
+      const parts = trimmed.split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        // YYYY-MM-DD -> DD/MM/YYYY
+        return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+      }
+    }
+    const parsed = new Date(trimmed);
+    if (!isNaN(parsed.getTime())) {
+      const day = String(parsed.getDate()).padStart(2, '0');
+      const month = String(parsed.getMonth() + 1).padStart(2, '0');
+      const year = parsed.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
   }
+  const date = dateStrOrObj instanceof Date ? dateStrOrObj : new Date();
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
+}
+
+export function extractDayOfMonth(dateStrOrObj?: string | Date): number {
+  if (typeof dateStrOrObj === 'string') {
+    const trimmed = dateStrOrObj.trim();
+    if (trimmed.includes('-')) {
+      const parts = trimmed.split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        const d = parseInt(parts[2], 10);
+        if (!isNaN(d) && d >= 1 && d <= 31) return d;
+      }
+    }
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/');
+      const d = parseInt(parts[0], 10);
+      if (!isNaN(d) && d >= 1 && d <= 31) return d;
+    }
+    const parsed = new Date(trimmed);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.getDate();
+    }
+  }
+  const date = dateStrOrObj instanceof Date ? dateStrOrObj : new Date();
+  return date.getDate();
+}
+
+export function getShiftOffset(shift?: string): number {
+  const s = String(shift || '').toUpperCase();
+  if (s === 'PAGI') return 0;
+  if (s === 'SIANG') return 1;
+  if (s === 'MALAM') return 2;
+  return 0;
+}
+
+export function calculateSlotRow(
+  dayOfMonth: number,
+  shift: string = 'PAGI',
+  baseStartRow: number = 6
+): number {
+  const d = Math.max(1, Math.min(31, dayOfMonth));
+  const offset = getShiftOffset(shift);
+  return baseStartRow + (d - 1) * 3 + offset;
 }
 
 export function getIndonesianMonthYear(date: Date = new Date()): string {
@@ -474,11 +531,12 @@ export async function createFullMonitoringSpreadsheet(
         { properties: { title: 'ACO TM D 126', gridProperties: { rowCount: 150, columnCount: 18, frozenRowCount: 5 } } },
         { properties: { title: 'ACO TR DIPO', gridProperties: { rowCount: 150, columnCount: 18, frozenRowCount: 5 } } },
         { properties: { title: 'ACO TR ST 12', gridProperties: { rowCount: 150, columnCount: 18, frozenRowCount: 5 } } },
-        { properties: { title: 'LAPORAN_CETAK_UPS', gridProperties: { rowCount: 200, columnCount: 19, frozenRowCount: 6 } } },
+        { properties: { title: 'UPS 30 KVA WAPRES', gridProperties: { rowCount: 150, columnCount: 19, frozenRowCount: 6 } } },
         { properties: { title: 'UPS 40 KVA WAPRES', gridProperties: { rowCount: 150, columnCount: 19, frozenRowCount: 6 } } },
         { properties: { title: 'UPS 60 KVA WAPRES', gridProperties: { rowCount: 150, columnCount: 19, frozenRowCount: 6 } } },
         { properties: { title: 'UPS 40 KVA DIPO', gridProperties: { rowCount: 150, columnCount: 19, frozenRowCount: 6 } } },
         { properties: { title: 'UPS 100 KVA ST 12', gridProperties: { rowCount: 150, columnCount: 19, frozenRowCount: 6 } } },
+        { properties: { title: 'LAPORAN_CETAK_UPS', gridProperties: { rowCount: 200, columnCount: 19, frozenRowCount: 6 } } },
       ],
     }),
   });
@@ -495,11 +553,12 @@ export async function createFullMonitoringSpreadsheet(
   const tmSheetId = sheets[0]?.properties?.sheetId ?? 0;
   const dipoSheetId = sheets[1]?.properties?.sheetId ?? 1;
   const st12SheetId = sheets[2]?.properties?.sheetId ?? 2;
-  const upsSheetId = sheets[3]?.properties?.sheetId ?? 3;
+  const ups30WapresSheetId = sheets[3]?.properties?.sheetId ?? 3;
   const ups40WapresSheetId = sheets[4]?.properties?.sheetId ?? 4;
   const ups60WapresSheetId = sheets[5]?.properties?.sheetId ?? 5;
   const ups40DipoSheetId = sheets[6]?.properties?.sheetId ?? 6;
   const ups100ST12SheetId = sheets[7]?.properties?.sheetId ?? 7;
+  const lapCetakUpsSheetId = sheets[8]?.properties?.sheetId ?? 8;
 
   const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
 
@@ -551,16 +610,16 @@ export async function createFullMonitoringSpreadsheet(
       ],
     },
     {
-      range: 'LAPORAN_CETAK_UPS!A1:R6',
-      values: buildUpsHeaderValues('PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN', 'BEBAN UPS 30 KVA WAKIL PRESIDEN'),
+      range: 'UPS 30 KVA WAPRES!A1:R6',
+      values: buildUpsHeaderValues('PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN', 'BEBAN UPS 30 KVA WAKIL PRESIDEN (LT 1)'),
     },
     {
       range: 'UPS 40 KVA WAPRES!A1:R6',
-      values: buildUpsHeaderValues('PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN', 'BEBAN UPS 40 KVA WAKIL PRESIDEN'),
+      values: buildUpsHeaderValues('PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN', 'BEBAN UPS 40 KVA WAKIL PRESIDEN (LT 2)'),
     },
     {
       range: 'UPS 60 KVA WAPRES!A1:R6',
-      values: buildUpsHeaderValues('PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN', 'BEBAN UPS 60 KVA WAKIL PRESIDEN'),
+      values: buildUpsHeaderValues('PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN', 'BEBAN UPS 60 KVA WAKIL PRESIDEN (LT 3)'),
     },
     {
       range: 'UPS 40 KVA DIPO!A1:R6',
@@ -569,6 +628,10 @@ export async function createFullMonitoringSpreadsheet(
     {
       range: 'UPS 100 KVA ST 12!A1:R6',
       values: buildUpsHeaderValues('PANTAUAN INSPEKSI UPS DI RUMAH DINAS WAKIL PRESIDEN (SITUBONDO 12)', 'BEBAN UPS 100 KVA RUMAH DINAS (SITUBONDO 12)'),
+    },
+    {
+      range: 'LAPORAN_CETAK_UPS!A1:R6',
+      values: buildUpsHeaderValues('PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN & RUMDIN', 'BEBAN UPS WAPRES & RUMDIN'),
     },
   ];
 
@@ -589,11 +652,12 @@ export async function createFullMonitoringSpreadsheet(
     ...buildAcoTMFormatRequests(tmSheetId),
     ...buildAcoDipoFormatRequests(dipoSheetId),
     ...buildAcoST12FormatRequests(st12SheetId),
-    ...buildUpsFormatRequests(upsSheetId),
+    ...buildUpsFormatRequests(ups30WapresSheetId),
     ...buildUpsFormatRequests(ups40WapresSheetId),
     ...buildUpsFormatRequests(ups60WapresSheetId),
     ...buildUpsFormatRequests(ups40DipoSheetId),
     ...buildUpsFormatRequests(ups100ST12SheetId),
+    ...buildUpsFormatRequests(lapCetakUpsSheetId),
   ];
 
   await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
@@ -615,22 +679,23 @@ export async function createFullMonitoringSpreadsheet(
       'ACO TM D 126',
       'ACO TR DIPO',
       'ACO TR ST 12',
-      'LAPORAN_CETAK_UPS',
+      'UPS 30 KVA WAPRES',
       'UPS 40 KVA WAPRES',
       'UPS 60 KVA WAPRES',
       'UPS 40 KVA DIPO',
       'UPS 100 KVA ST 12',
+      'LAPORAN_CETAK_UPS',
     ],
     sheetTabs: {
       acoTM: 'ACO TM D 126',
       acoTRDipo: 'ACO TR DIPO',
       acoTRST12: 'ACO TR ST 12',
-      ups: 'LAPORAN_CETAK_UPS',
-      ups30Wapres: 'LAPORAN_CETAK_UPS',
+      ups30Wapres: 'UPS 30 KVA WAPRES',
       ups40Wapres: 'UPS 40 KVA WAPRES',
       ups60Wapres: 'UPS 60 KVA WAPRES',
       ups40Dipo: 'UPS 40 KVA DIPO',
       ups100ST12: 'UPS 100 KVA ST 12',
+      ups: 'LAPORAN_CETAK_UPS',
     },
   };
 
@@ -685,12 +750,12 @@ export async function connectExistingSpreadsheet(
     acoTM: findTab(['TM D 126', 'ACO TM', 'D 126', 'D126', 'LAPORAN_CETAK', availableTitles[0] || 'Sheet1']),
     acoTRDipo: findTab(['ACO TR DIPO', 'DIPO', 'LAPORAN_CETAK', availableTitles[0] || 'Sheet1']),
     acoTRST12: findTab(['ACO TR ST 12', 'ST 12', 'ST12', 'SITUBONDO', 'LAPORAN_CETAK', availableTitles[0] || 'Sheet1']),
-    ups: findTab(['LAPORAN_CETAK_UPS', 'UPS 30', 'UPS WAPRES', 'UPS', 'BEBAN', availableTitles[0] || 'Sheet1']),
-    ups30Wapres: findTab(['LAPORAN_CETAK_UPS', 'UPS 30 KVA', 'UPS 30', 'UPS WAPRES']),
-    ups40Wapres: findTab(['UPS 40 KVA WAPRES', 'UPS 40 WAPRES', 'UPS 40']),
-    ups60Wapres: findTab(['UPS 60 KVA WAPRES', 'UPS 60 WAPRES', 'UPS 60']),
-    ups40Dipo: findTab(['UPS 40 KVA DIPO', 'UPS 40 DIPO', 'DIPO UPS']),
-    ups100ST12: findTab(['UPS 100 KVA ST 12', 'UPS 100 ST 12', 'UPS 100', 'ST12 UPS']),
+    ups: findTab(['LAPORAN_CETAK_UPS', 'LAPORAN_CETAK', 'UPS', 'BEBAN', availableTitles[0] || 'Sheet1']),
+    ups30Wapres: findTab(['UPS 30 KVA WAPRES', 'UPS 30 WAPRES', 'UPS 30 KVA', 'UPS 30', 'UPS LT 1', 'LAPORAN_CETAK_UPS']),
+    ups40Wapres: findTab(['UPS 40 KVA WAPRES', 'UPS 40 WAPRES', 'UPS 40 KVA', 'UPS 40 LT 2', 'UPS 40']),
+    ups60Wapres: findTab(['UPS 60 KVA WAPRES', 'UPS 60 WAPRES', 'UPS 60 KVA', 'UPS 60 LT 3', 'UPS 60']),
+    ups40Dipo: findTab(['UPS 40 KVA DIPO', 'UPS 40 DIPO', 'DIPO UPS', 'DIPO']),
+    ups100ST12: findTab(['UPS 100 KVA ST 12', 'UPS 100 ST 12', 'UPS 100', 'ST12 UPS', 'ST 12']),
   };
 
   const firstSheet = sheetsList[0];
@@ -744,12 +809,12 @@ export async function ensureSheetTab(
     acoTM: 'ACO TM D 126',
     acoTRDipo: 'ACO TR DIPO',
     acoTRST12: 'ACO TR ST 12',
-    ups: 'LAPORAN_CETAK_UPS',
-    ups30Wapres: 'LAPORAN_CETAK_UPS',
+    ups30Wapres: 'UPS 30 KVA WAPRES',
     ups40Wapres: 'UPS 40 KVA WAPRES',
     ups60Wapres: 'UPS 60 KVA WAPRES',
     ups40Dipo: 'UPS 40 KVA DIPO',
     ups100ST12: 'UPS 100 KVA ST 12',
+    ups: 'LAPORAN_CETAK_UPS',
   };
 
   const targetTitle = preferredTitle || defaultTitles[tabType];
@@ -771,7 +836,7 @@ export async function ensureSheetTab(
     const upsMatch = existingSheets.find((s) =>
       s.properties?.title?.toLowerCase().includes('ups')
     );
-    if (upsMatch && (tabType === 'ups' || tabType === 'ups30Wapres')) {
+    if (upsMatch && tabType === 'ups') {
       return upsMatch.properties.title;
     }
   }
@@ -974,23 +1039,38 @@ export async function getExistingSheetRows(
 }
 
 /**
- * Append ACO TM Wapres record to the spreadsheet.
+ * Append or Update ACO TM Wapres record by (Tanggal + Shift) slot.
+ * Ensures data updates in-place and does not pile up downward.
  */
 export async function appendAcoWapresRecord(
   accessToken: string,
   spreadsheetId: string,
   sheetName: string,
   wapresReport: TimWapresReport,
-  customNo?: number
+  shift?: ShiftType | string
 ): Promise<{ success: boolean; rowNumber: number }> {
-  const targetSheet = await ensureSheetTab(accessToken, spreadsheetId, 'acoTM', sheetName);
-  const { rows, nextRowIndex, calculatedNo } = await getExistingSheetRows(
-    accessToken,
-    spreadsheetId,
-    targetSheet,
-    6,
-    'Q'
-  );
+  // Check if LAPORAN_CETAK combined sheet exists
+  let targetSheet = sheetName || 'ACO TM D 126';
+  let baseStartRow = 6;
+  try {
+    const metaRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      const sheetTitles: string[] = (meta.sheets || []).map((s: any) => s.properties?.title);
+      if (sheetTitles.includes('LAPORAN_CETAK')) {
+        targetSheet = 'LAPORAN_CETAK';
+        baseStartRow = 6;
+      } else {
+        targetSheet = await ensureSheetTab(accessToken, spreadsheetId, 'acoTM', sheetName);
+        baseStartRow = 6;
+      }
+    }
+  } catch {
+    targetSheet = await ensureSheetTab(accessToken, spreadsheetId, 'acoTM', sheetName);
+  }
 
   const officers = wapresReport.officers.filter(Boolean);
   const officersStr =
@@ -999,19 +1079,12 @@ export async function appendAcoWapresRecord(
   const dateFormatted = formatToDDMMYYYY(wapresReport.inspectionDate || new Date());
   const timeFormatted = wapresReport.inspectionTime || 'WIB';
 
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : null;
-  const lastDate = lastRow ? lastRow[2] : null;
-  const isSameDateAsLast = lastDate === dateFormatted;
+  const dayOfMonth = extractDayOfMonth(wapresReport.inspectionDate || new Date());
+  const activeShift = shift || (wapresReport as any)?.shift || 'PAGI';
+  const shiftOffset = getShiftOffset(activeShift);
+  const targetRow = calculateSlotRow(dayOfMonth, activeShift, baseStartRow);
 
-  let rowNoValue = '';
-  if (customNo !== undefined) {
-    rowNoValue = String(customNo);
-  } else if (!isSameDateAsLast) {
-    rowNoValue = String(calculatedNo);
-  } else {
-    rowNoValue = '';
-  }
-
+  const rowNoValue = shiftOffset === 0 ? String(dayOfMonth) : '';
   const aco = wapresReport.acoTM;
 
   const rowValues = [
@@ -1034,49 +1107,65 @@ export async function appendAcoWapresRecord(
     aco.keterangan || '-',
   ];
 
-  const appendRes = await fetch(
+  // In-place update using PUT on the exact date & shift row
+  const updateRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
       targetSheet
-    )}!A6:Q:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+    )}!A${targetRow}:Q${targetRow}?valueInputOption=USER_ENTERED`,
     {
-      method: 'POST',
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        range: `${targetSheet}!A6:Q`,
+        range: `${targetSheet}!A${targetRow}:Q${targetRow}`,
         majorDimension: 'ROWS',
         values: [rowValues],
       }),
     }
   );
 
-  if (!appendRes.ok) {
-    const err = await appendRes.json();
-    throw new Error(err.error?.message || 'Gagal menambahkan baris ACO TM ke Google Sheets.');
+  if (!updateRes.ok) {
+    const err = await updateRes.json();
+    throw new Error(err.error?.message || 'Gagal memperbarui baris ACO TM ke Google Sheets.');
   }
 
-  return { success: true, rowNumber: nextRowIndex };
+  return { success: true, rowNumber: targetRow };
 }
 
 /**
- * Append ACO TR DIPO record to Google Sheets (Image 2 format).
+ * Append or Update ACO TR DIPO record by (Tanggal + Shift) slot.
+ * Ensures data updates in-place and does not pile up downward.
  */
 export async function appendAcoDipoRecord(
   accessToken: string,
   spreadsheetId: string,
   sheetName: string = 'ACO TR DIPO',
-  rumdinReport: TimRumdinReport
+  rumdinReport: TimRumdinReport,
+  shift?: ShiftType | string
 ): Promise<{ success: boolean; rowNumber: number }> {
-  const targetSheet = await ensureSheetTab(accessToken, spreadsheetId, 'acoTRDipo', sheetName);
-  const { rows, nextRowIndex, calculatedNo } = await getExistingSheetRows(
-    accessToken,
-    spreadsheetId,
-    targetSheet,
-    6,
-    'Q'
-  );
+  let targetSheet = sheetName;
+  let baseStartRow = 6;
+  try {
+    const metaRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      const sheetTitles: string[] = (meta.sheets || []).map((s: any) => s.properties?.title);
+      if (sheetTitles.includes('LAPORAN_CETAK')) {
+        targetSheet = 'LAPORAN_CETAK';
+        baseStartRow = 205; // DIPO table starts at row 205 in LAPORAN_CETAK
+      } else {
+        targetSheet = await ensureSheetTab(accessToken, spreadsheetId, 'acoTRDipo', sheetName);
+        baseStartRow = 6;
+      }
+    }
+  } catch {
+    targetSheet = await ensureSheetTab(accessToken, spreadsheetId, 'acoTRDipo', sheetName);
+  }
 
   const officers = rumdinReport.officers.filter(Boolean);
   const officersStr =
@@ -1085,17 +1174,14 @@ export async function appendAcoDipoRecord(
   const dateFormatted = formatToDDMMYYYY(rumdinReport.inspectionDate || new Date());
   const timeFormatted = rumdinReport.inspectionTime || 'WIB';
 
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : null;
-  const lastDate = lastRow ? lastRow[2] : null;
-  const isSameDateAsLast = lastDate === dateFormatted;
+  const dayOfMonth = extractDayOfMonth(rumdinReport.inspectionDate || new Date());
+  const activeShift = shift || (rumdinReport as any)?.shift || 'PAGI';
+  const shiftOffset = getShiftOffset(activeShift);
+  const targetRow = calculateSlotRow(dayOfMonth, activeShift, baseStartRow);
 
-  const rowNoValue = !isSameDateAsLast ? String(calculatedNo) : '';
-
+  const rowNoValue = shiftOffset === 0 ? String(dayOfMonth) : '';
   const dipo = rumdinReport.acoTRDipo;
 
-  // In Image 2:
-  // Col E: GARDU T15N (CLOSE or OPEN)
-  // Col F: GARDU T135 (OPEN or CLOSE)
   const rowValues = [
     rowNoValue, // A: NO
     officersStr, // B: NAMA PETUGAS
@@ -1116,49 +1202,64 @@ export async function appendAcoDipoRecord(
     dipo.keterangan || '-', // Q: KETERANGAN
   ];
 
-  const appendRes = await fetch(
+  const updateRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
       targetSheet
-    )}!A6:Q:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+    )}!A${targetRow}:Q${targetRow}?valueInputOption=USER_ENTERED`,
     {
-      method: 'POST',
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        range: `${targetSheet}!A6:Q`,
+        range: `${targetSheet}!A${targetRow}:Q${targetRow}`,
         majorDimension: 'ROWS',
         values: [rowValues],
       }),
     }
   );
 
-  if (!appendRes.ok) {
-    const err = await appendRes.json();
-    throw new Error(err.error?.message || 'Gagal menambahkan baris ACO TR DIPO ke Google Sheets.');
+  if (!updateRes.ok) {
+    const err = await updateRes.json();
+    throw new Error(err.error?.message || 'Gagal memperbarui baris ACO TR DIPO ke Google Sheets.');
   }
 
-  return { success: true, rowNumber: nextRowIndex };
+  return { success: true, rowNumber: targetRow };
 }
 
 /**
- * Append ACO TR ST 12 (Situbondo 12) record to Google Sheets (Image 1 format).
+ * Append or Update ACO TR ST 12 (Situbondo 12) record by (Tanggal + Shift) slot.
+ * Ensures data updates in-place and does not pile up downward.
  */
 export async function appendAcoST12Record(
   accessToken: string,
   spreadsheetId: string,
   sheetName: string = 'ACO TR ST 12',
-  rumdinReport: TimRumdinReport
+  rumdinReport: TimRumdinReport,
+  shift?: ShiftType | string
 ): Promise<{ success: boolean; rowNumber: number }> {
-  const targetSheet = await ensureSheetTab(accessToken, spreadsheetId, 'acoTRST12', sheetName);
-  const { rows, nextRowIndex, calculatedNo } = await getExistingSheetRows(
-    accessToken,
-    spreadsheetId,
-    targetSheet,
-    6,
-    'Q'
-  );
+  let targetSheet = sheetName;
+  let baseStartRow = 6;
+  try {
+    const metaRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties.title`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      const sheetTitles: string[] = (meta.sheets || []).map((s: any) => s.properties?.title);
+      if (sheetTitles.includes('LAPORAN_CETAK')) {
+        targetSheet = 'LAPORAN_CETAK';
+        baseStartRow = 106; // SITUBONDO 12 table starts at row 106 in LAPORAN_CETAK
+      } else {
+        targetSheet = await ensureSheetTab(accessToken, spreadsheetId, 'acoTRST12', sheetName);
+        baseStartRow = 6;
+      }
+    }
+  } catch {
+    targetSheet = await ensureSheetTab(accessToken, spreadsheetId, 'acoTRST12', sheetName);
+  }
 
   const officers = rumdinReport.officers.filter(Boolean);
   const officersStr =
@@ -1167,17 +1268,14 @@ export async function appendAcoST12Record(
   const dateFormatted = formatToDDMMYYYY(rumdinReport.inspectionDate || new Date());
   const timeFormatted = rumdinReport.inspectionTime || 'WIB';
 
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : null;
-  const lastDate = lastRow ? lastRow[2] : null;
-  const isSameDateAsLast = lastDate === dateFormatted;
+  const dayOfMonth = extractDayOfMonth(rumdinReport.inspectionDate || new Date());
+  const activeShift = shift || (rumdinReport as any)?.shift || 'PAGI';
+  const shiftOffset = getShiftOffset(activeShift);
+  const targetRow = calculateSlotRow(dayOfMonth, activeShift, baseStartRow);
 
-  const rowNoValue = !isSameDateAsLast ? String(calculatedNo) : '';
-
+  const rowNoValue = shiftOffset === 0 ? String(dayOfMonth) : '';
   const st12 = rumdinReport.acoTRST12;
 
-  // In Image 1:
-  // Col E: CLOSE (e.g. GARDU T93)
-  // Col F: OPEN (e.g. GARDU T10B)
   const isT93Close = st12.garduT93Status === 'CLOSE' || (!st12.garduT93Status && st12.garduT10BStatus !== 'CLOSE');
   const penyulangClose = isT93Close ? 'GARDU T93' : 'GARDU T10B';
   const penyulangOpen = isT93Close ? 'GARDU T10B' : 'GARDU T93';
@@ -1202,30 +1300,30 @@ export async function appendAcoST12Record(
     st12.keterangan || '-', // Q: KETERANGAN
   ];
 
-  const appendRes = await fetch(
+  const updateRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
       targetSheet
-    )}!A6:Q:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+    )}!A${targetRow}:Q${targetRow}?valueInputOption=USER_ENTERED`,
     {
-      method: 'POST',
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        range: `${targetSheet}!A6:Q`,
+        range: `${targetSheet}!A${targetRow}:Q${targetRow}`,
         majorDimension: 'ROWS',
         values: [rowValues],
       }),
     }
   );
 
-  if (!appendRes.ok) {
-    const err = await appendRes.json();
-    throw new Error(err.error?.message || 'Gagal menambahkan baris ACO TR ST 12 ke Google Sheets.');
+  if (!updateRes.ok) {
+    const err = await updateRes.json();
+    throw new Error(err.error?.message || 'Gagal memperbarui baris ACO TR ST 12 ke Google Sheets.');
   }
 
-  return { success: true, rowNumber: nextRowIndex };
+  return { success: true, rowNumber: targetRow };
 }
 
 function formatAmpere(val?: string): string {
@@ -1317,7 +1415,7 @@ export function buildUpsRow(
 }
 
 /**
- * Append single UPS record to its own tab
+ * Append or Update single UPS record to its own tab by (Tanggal + Shift) slot.
  */
 export async function appendSingleUpsRecord(
   accessToken: string,
@@ -1330,16 +1428,10 @@ export async function appendSingleUpsRecord(
   inspectionDate: string | Date | undefined,
   inspectionTime: string | undefined,
   ups: UPSData,
-  keteranganSuffix?: string
+  keteranganSuffix?: string,
+  shift?: ShiftType | string
 ): Promise<{ success: boolean; rowNumber: number }> {
   const targetSheet = await ensureSheetTab(accessToken, spreadsheetId, tabType, targetSheetName);
-  const { rows, calculatedNo, nextRowIndex } = await getExistingSheetRows(
-    accessToken,
-    spreadsheetId,
-    targetSheet,
-    7,
-    'R'
-  );
 
   const officersClean = officers.filter(Boolean);
   const officersStr =
@@ -1353,10 +1445,12 @@ export async function appendSingleUpsRecord(
     timeFormatted = `${timeFormatted} WIB`;
   }
 
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : null;
-  const lastDate = lastRow ? lastRow[2] : null;
-  const isSameDateAsLast = lastDate === dateFormatted;
-  const noValue = !isSameDateAsLast ? String(calculatedNo) : '';
+  const dayOfMonth = extractDayOfMonth(inspectionDate || new Date());
+  const activeShift = shift || 'PAGI';
+  const shiftOffset = getShiftOffset(activeShift);
+  const targetRow = calculateSlotRow(dayOfMonth, activeShift, 7);
+
+  const noValue = shiftOffset === 0 ? String(dayOfMonth) : '';
 
   const upsRow = buildUpsRow(
     noValue,
@@ -1367,40 +1461,42 @@ export async function appendSingleUpsRecord(
     keteranganSuffix
   );
 
-  const appendRes = await fetch(
+  const updateRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
       targetSheet
-    )}!A7:R:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+    )}!A${targetRow}:R${targetRow}?valueInputOption=USER_ENTERED`,
     {
-      method: 'POST',
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        range: `${targetSheet}!A7:R`,
+        range: `${targetSheet}!A${targetRow}:R${targetRow}`,
         majorDimension: 'ROWS',
         values: [upsRow],
       }),
     }
   );
 
-  if (!appendRes.ok) {
-    const err = await appendRes.json();
-    throw new Error(err.error?.message || `Gagal menambahkan baris UPS ke sheet ${targetSheet}.`);
+  if (!updateRes.ok) {
+    const err = await updateRes.json();
+    throw new Error(err.error?.message || `Gagal memperbarui baris UPS ke sheet ${targetSheet}.`);
   }
 
-  return { success: true, rowNumber: nextRowIndex };
+  return { success: true, rowNumber: targetRow };
 }
 
 /**
- * Append UPS Rumdin Records (UPS 40 Dipo & UPS 100 ST12) to Google Sheets.
+ * Append or Update UPS Rumdin Records to Google Sheets by (Tanggal + Shift) slot.
+ * Ensures UPS 40 KVA DIPO and UPS 100 KVA ST 12 are both updated to their dedicated tabs.
  */
 export async function appendRumdinUpsRecords(
   accessToken: string,
   spreadsheetId: string,
   targetSheetOrTabs?: string | SheetTabMapping,
-  rumdinReport?: TimRumdinReport
+  rumdinReport?: TimRumdinReport,
+  shift?: ShiftType | string
 ): Promise<{ success: boolean; rowsAdded: number }> {
   let tabs: SheetTabMapping | undefined;
   let report: TimRumdinReport | undefined;
@@ -1415,121 +1511,54 @@ export async function appendRumdinUpsRecords(
 
   if (!report) return { success: false, rowsAdded: 0 };
 
-  const separateTabsExist = Boolean(tabs?.ups40Dipo && tabs.ups40Dipo !== tabs?.ups);
+  const tab40Dipo = tabs?.ups40Dipo || 'UPS 40 KVA DIPO';
+  const tab100ST12 = tabs?.ups100ST12 || 'UPS 100 KVA ST 12';
 
-  if (separateTabsExist) {
-    if (tabs?.ups40Dipo) {
-      await appendSingleUpsRecord(
-        accessToken,
-        spreadsheetId,
-        'ups40Dipo',
-        tabs.ups40Dipo,
-        'PANTAUAN INSPEKSI UPS DI RUMAH DINAS WAKIL PRESIDEN (DIPO)',
-        'BEBAN UPS 40 KVA RUMAH DINAS (DIPO)',
-        report.officers,
-        report.inspectionDate,
-        report.inspectionTime,
-        report.ups40Dipo
-      );
-    }
-    if (tabs?.ups100ST12) {
-      await appendSingleUpsRecord(
-        accessToken,
-        spreadsheetId,
-        'ups100ST12',
-        tabs.ups100ST12,
-        'PANTAUAN INSPEKSI UPS DI RUMAH DINAS WAKIL PRESIDEN (SITUBONDO 12)',
-        'BEBAN UPS 100 KVA RUMAH DINAS (SITUBONDO 12)',
-        report.officers,
-        report.inspectionDate,
-        report.inspectionTime,
-        report.ups100ST12
-      );
-    }
-    return { success: true, rowsAdded: 2 };
-  }
-
-  const targetSheet = await ensureSheetTab(
+  // Always update UPS 40 KVA DIPO
+  await appendSingleUpsRecord(
     accessToken,
     spreadsheetId,
     'ups40Dipo',
-    tabs?.ups || 'LAPORAN_CETAK_UPS'
+    tab40Dipo,
+    'PANTAUAN INSPEKSI UPS DI RUMAH DINAS WAKIL PRESIDEN (DIPO)',
+    'BEBAN UPS 40 KVA RUMAH DINAS (DIPO)',
+    report.officers,
+    report.inspectionDate,
+    report.inspectionTime,
+    report.ups40Dipo,
+    undefined,
+    shift || (report as any)?.shift
   );
-  const { rows, calculatedNo } = await getExistingSheetRows(
+
+  // Always update UPS 100 KVA ST 12
+  await appendSingleUpsRecord(
     accessToken,
     spreadsheetId,
-    targetSheet,
-    7,
-    'R'
+    'ups100ST12',
+    tab100ST12,
+    'PANTAUAN INSPEKSI UPS DI RUMAH DINAS WAKIL PRESIDEN (SITUBONDO 12)',
+    'BEBAN UPS 100 KVA RUMAH DINAS (SITUBONDO 12)',
+    report.officers,
+    report.inspectionDate,
+    report.inspectionTime,
+    report.ups100ST12,
+    undefined,
+    shift || (report as any)?.shift
   );
 
-  const officers = report.officers.filter(Boolean);
-  const officersStr =
-    officers.length > 0 ? officers.map((o) => o.toUpperCase()).join(' , ') : '-';
-
-  const dateFormatted = formatToDDMMYYYY(report.inspectionDate || new Date());
-  let timeFormatted = report.inspectionTime || 'WIB';
-  if (!timeFormatted.toUpperCase().includes('WIB')) {
-    timeFormatted = `${timeFormatted} WIB`;
-  }
-
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : null;
-  const isSameDateAsLast = lastRow ? lastRow[2] === dateFormatted : false;
-  const noValue = !isSameDateAsLast ? String(calculatedNo) : '';
-
-  const upsRows = [
-    buildUpsRow(
-      noValue,
-      officersStr,
-      dateFormatted,
-      timeFormatted,
-      report.ups40Dipo,
-      'UPS 40 KVA RUMDIN (DIPO)'
-    ),
-    buildUpsRow(
-      '',
-      officersStr,
-      dateFormatted,
-      timeFormatted,
-      report.ups100ST12,
-      'UPS 100 KVA RUMDIN (ST12)'
-    ),
-  ];
-
-  const appendRes = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
-      targetSheet
-    )}!A7:R:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        range: `${targetSheet}!A7:R`,
-        majorDimension: 'ROWS',
-        values: upsRows,
-      }),
-    }
-  );
-
-  if (!appendRes.ok) {
-    const err = await appendRes.json();
-    throw new Error(err.error?.message || 'Gagal menambahkan data UPS Rumdin ke Google Sheets.');
-  }
-
-  return { success: true, rowsAdded: upsRows.length };
+  return { success: true, rowsAdded: 2 };
 }
 
 /**
- * Append UPS Wapres Records (UPS 30, 40, 60 KVA) to Google Sheets.
+ * Append or Update UPS Wapres Records to Google Sheets by (Tanggal + Shift) slot.
+ * Ensures UPS 30, UPS 40, and UPS 60 are all updated to their dedicated tabs.
  */
 export async function appendWapresUpsRecords(
   accessToken: string,
   spreadsheetId: string,
   targetSheetOrTabs?: string | SheetTabMapping,
-  wapresReport?: TimWapresReport
+  wapresReport?: TimWapresReport,
+  shift?: ShiftType | string
 ): Promise<{ success: boolean; rowsAdded: number }> {
   let tabs: SheetTabMapping | undefined;
   let report: TimWapresReport | undefined;
@@ -1544,131 +1573,177 @@ export async function appendWapresUpsRecords(
 
   if (!report) return { success: false, rowsAdded: 0 };
 
-  const separateTabsExist = Boolean(tabs?.ups40Wapres && tabs.ups40Wapres !== tabs?.ups);
+  const tab30 = tabs?.ups30Wapres || 'UPS 30 KVA WAPRES';
+  const tab40 = tabs?.ups40Wapres || 'UPS 40 KVA WAPRES';
+  const tab60 = tabs?.ups60Wapres || 'UPS 60 KVA WAPRES';
 
-  if (separateTabsExist) {
-    await appendSingleUpsRecord(
-      accessToken,
-      spreadsheetId,
-      'ups30Wapres',
-      tabs?.ups30Wapres || tabs?.ups || 'LAPORAN_CETAK_UPS',
-      'PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN',
-      'BEBAN UPS 30 KVA WAKIL PRESIDEN',
-      report.officers,
-      report.inspectionDate,
-      report.inspectionTime,
-      report.ups30
-    );
-    if (tabs?.ups40Wapres) {
-      await appendSingleUpsRecord(
-        accessToken,
-        spreadsheetId,
-        'ups40Wapres',
-        tabs.ups40Wapres,
-        'PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN',
-        'BEBAN UPS 40 KVA WAKIL PRESIDEN',
-        report.officers,
-        report.inspectionDate,
-        report.inspectionTime,
-        report.ups40
-      );
-    }
-    if (tabs?.ups60Wapres) {
-      await appendSingleUpsRecord(
-        accessToken,
-        spreadsheetId,
-        'ups60Wapres',
-        tabs.ups60Wapres,
-        'PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN',
-        'BEBAN UPS 60 KVA WAKIL PRESIDEN',
-        report.officers,
-        report.inspectionDate,
-        report.inspectionTime,
-        report.ups60
-      );
-    }
-    return { success: true, rowsAdded: 3 };
-  }
-
-  const targetSheet = await ensureSheetTab(
+  // 1. UPS 30 KVA Wapres (Lt 1)
+  await appendSingleUpsRecord(
     accessToken,
     spreadsheetId,
     'ups30Wapres',
-    tabs?.ups || 'LAPORAN_CETAK_UPS'
+    tab30,
+    'PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN',
+    'BEBAN UPS 30 KVA WAKIL PRESIDEN (LT 1)',
+    report.officers,
+    report.inspectionDate,
+    report.inspectionTime,
+    report.ups30,
+    undefined,
+    shift || (report as any)?.shift
   );
-  const { rows, calculatedNo } = await getExistingSheetRows(
+
+  // 2. UPS 40 KVA Wapres (Lt 2)
+  await appendSingleUpsRecord(
     accessToken,
     spreadsheetId,
+    'ups40Wapres',
+    tab40,
+    'PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN',
+    'BEBAN UPS 40 KVA WAKIL PRESIDEN (LT 2)',
+    report.officers,
+    report.inspectionDate,
+    report.inspectionTime,
+    report.ups40,
+    undefined,
+    shift || (report as any)?.shift
+  );
+
+  // 3. UPS 60 KVA Wapres (Lt 3)
+  await appendSingleUpsRecord(
+    accessToken,
+    spreadsheetId,
+    'ups60Wapres',
+    tab60,
+    'PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN',
+    'BEBAN UPS 60 KVA WAKIL PRESIDEN (LT 3)',
+    report.officers,
+    report.inspectionDate,
+    report.inspectionTime,
+    report.ups60,
+    undefined,
+    shift || (report as any)?.shift
+  );
+
+  return { success: true, rowsAdded: 3 };
+}
+
+/**
+ * Individual UPS sync functions for direct single-card or single-button sync
+ */
+export async function appendSingleUps30Wapres(
+  accessToken: string,
+  spreadsheetId: string,
+  targetSheet: string,
+  report: TimWapresReport,
+  shift?: ShiftType | string
+) {
+  return appendSingleUpsRecord(
+    accessToken,
+    spreadsheetId,
+    'ups30Wapres',
     targetSheet,
-    7,
-    'R'
+    'PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN',
+    'BEBAN UPS 30 KVA WAKIL PRESIDEN (LT 1)',
+    report.officers,
+    report.inspectionDate,
+    report.inspectionTime,
+    report.ups30,
+    'UPS 30 KVA LT 1',
+    shift || (report as any)?.shift
   );
+}
 
-  const officers = report.officers.filter(Boolean);
-  const officersStr =
-    officers.length > 0 ? officers.map((o) => o.toUpperCase()).join(' , ') : '-';
-
-  const dateFormatted = formatToDDMMYYYY(report.inspectionDate || new Date());
-  let timeFormatted = report.inspectionTime || 'WIB';
-  if (!timeFormatted.toUpperCase().includes('WIB')) {
-    timeFormatted = `${timeFormatted} WIB`;
-  }
-
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : null;
-  const isSameDateAsLast = lastRow ? lastRow[2] === dateFormatted : false;
-  const noValue = !isSameDateAsLast ? String(calculatedNo) : '';
-
-  const upsRows = [
-    buildUpsRow(
-      noValue,
-      officersStr,
-      dateFormatted,
-      timeFormatted,
-      report.ups30,
-      'UPS 30 KVA LT 1'
-    ),
-    buildUpsRow(
-      '',
-      officersStr,
-      dateFormatted,
-      timeFormatted,
-      report.ups40,
-      'UPS 40 KVA LT 2'
-    ),
-    buildUpsRow(
-      '',
-      officersStr,
-      dateFormatted,
-      timeFormatted,
-      report.ups60,
-      'UPS 60 KVA LT 3'
-    ),
-  ];
-
-  const appendRes = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
-      targetSheet
-    )}!A7:R:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        range: `${targetSheet}!A7:R`,
-        majorDimension: 'ROWS',
-        values: upsRows,
-      }),
-    }
+export async function appendSingleUps40Wapres(
+  accessToken: string,
+  spreadsheetId: string,
+  targetSheet: string,
+  report: TimWapresReport,
+  shift?: ShiftType | string
+) {
+  return appendSingleUpsRecord(
+    accessToken,
+    spreadsheetId,
+    'ups40Wapres',
+    targetSheet,
+    'PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN',
+    'BEBAN UPS 40 KVA WAKIL PRESIDEN (LT 2)',
+    report.officers,
+    report.inspectionDate,
+    report.inspectionTime,
+    report.ups40,
+    'UPS 40 KVA LT 2',
+    shift || (report as any)?.shift
   );
+}
 
-  if (!appendRes.ok) {
-    const err = await appendRes.json();
-    throw new Error(err.error?.message || 'Gagal menambahkan data UPS Wapres ke Google Sheets.');
-  }
+export async function appendSingleUps60Wapres(
+  accessToken: string,
+  spreadsheetId: string,
+  targetSheet: string,
+  report: TimWapresReport,
+  shift?: ShiftType | string
+) {
+  return appendSingleUpsRecord(
+    accessToken,
+    spreadsheetId,
+    'ups60Wapres',
+    targetSheet,
+    'PANTAUAN INSPEKSI UPS DI ISTANA WAKIL PRESIDEN',
+    'BEBAN UPS 60 KVA WAKIL PRESIDEN (LT 3)',
+    report.officers,
+    report.inspectionDate,
+    report.inspectionTime,
+    report.ups60,
+    'UPS 60 KVA LT 3',
+    shift || (report as any)?.shift
+  );
+}
 
-  return { success: true, rowsAdded: upsRows.length };
+export async function appendSingleUps40Dipo(
+  accessToken: string,
+  spreadsheetId: string,
+  targetSheet: string,
+  report: TimRumdinReport,
+  shift?: ShiftType | string
+) {
+  return appendSingleUpsRecord(
+    accessToken,
+    spreadsheetId,
+    'ups40Dipo',
+    targetSheet,
+    'PANTAUAN INSPEKSI UPS DI RUMAH DINAS WAKIL PRESIDEN (DIPO)',
+    'BEBAN UPS 40 KVA RUMAH DINAS (DIPO)',
+    report.officers,
+    report.inspectionDate,
+    report.inspectionTime,
+    report.ups40Dipo,
+    'UPS 40 KVA DIPO',
+    shift || (report as any)?.shift
+  );
+}
+
+export async function appendSingleUps100ST12(
+  accessToken: string,
+  spreadsheetId: string,
+  targetSheet: string,
+  report: TimRumdinReport,
+  shift?: ShiftType | string
+) {
+  return appendSingleUpsRecord(
+    accessToken,
+    spreadsheetId,
+    'ups100ST12',
+    targetSheet,
+    'PANTAUAN INSPEKSI UPS DI RUMAH DINAS WAKIL PRESIDEN (SITUBONDO 12)',
+    'BEBAN UPS 100 KVA RUMAH DINAS (SITUBONDO 12)',
+    report.officers,
+    report.inspectionDate,
+    report.inspectionTime,
+    report.ups100ST12,
+    'UPS 100 KVA ST 12',
+    shift || (report as any)?.shift
+  );
 }
 
 /**
@@ -1678,13 +1753,14 @@ export async function appendAllRumdinRecords(
   accessToken: string,
   spreadsheetId: string,
   rumdinReport: TimRumdinReport,
-  tabs?: SheetTabMapping
+  tabs?: SheetTabMapping,
+  shift?: ShiftType | string
 ): Promise<{ success: boolean; messages: string[] }> {
   const messages: string[] = [];
 
   // 1. ACO TR Dipo
   try {
-    await appendAcoDipoRecord(accessToken, spreadsheetId, tabs?.acoTRDipo || 'ACO TR DIPO', rumdinReport);
+    await appendAcoDipoRecord(accessToken, spreadsheetId, tabs?.acoTRDipo || 'ACO TR DIPO', rumdinReport, shift);
     messages.push('ACO TR DIPO');
   } catch (err: any) {
     console.error('DIPO sync error:', err);
@@ -1693,7 +1769,7 @@ export async function appendAllRumdinRecords(
 
   // 2. ACO TR ST 12
   try {
-    await appendAcoST12Record(accessToken, spreadsheetId, tabs?.acoTRST12 || 'ACO TR ST 12', rumdinReport);
+    await appendAcoST12Record(accessToken, spreadsheetId, tabs?.acoTRST12 || 'ACO TR ST 12', rumdinReport, shift);
     messages.push('ACO TR ST 12');
   } catch (err: any) {
     console.error('ST12 sync error:', err);
@@ -1702,7 +1778,7 @@ export async function appendAllRumdinRecords(
 
   // 3. UPS Rumdin (Dipo & ST12)
   try {
-    await appendRumdinUpsRecords(accessToken, spreadsheetId, tabs, rumdinReport);
+    await appendRumdinUpsRecords(accessToken, spreadsheetId, tabs, rumdinReport, shift);
     messages.push('UPS Rumdin (40 & 100 KVA)');
   } catch (err: any) {
     console.error('UPS Rumdin sync error:', err);
@@ -1710,4 +1786,151 @@ export async function appendAllRumdinRecords(
   }
 
   return { success: true, messages };
+}
+
+/**
+ * Format and tidy all sheets in an existing Google Spreadsheet (standard PLN layout)
+ */
+export async function formatAndTidyExistingSpreadsheet(
+  accessToken: string,
+  spreadsheetId: string
+): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || 'Gagal mengakses Google Spreadsheet.');
+  }
+
+  const data = await res.json();
+  const sheets: any[] = data.sheets || [];
+  const requests: any[] = [];
+
+  for (const sheet of sheets) {
+    const sheetId = sheet.properties?.sheetId;
+    const title = sheet.properties?.title || '';
+    const lower = title.toLowerCase();
+
+    if (sheetId === undefined) continue;
+
+    if (lower.includes('d 126') || lower.includes('aco tm') || lower.includes('d126')) {
+      requests.push(...buildAcoTMFormatRequests(sheetId));
+    } else if (lower.includes('dipo') && (lower.includes('aco') || lower.includes('tr'))) {
+      requests.push(...buildAcoDipoFormatRequests(sheetId));
+    } else if (
+      (lower.includes('st 12') || lower.includes('st12') || lower.includes('situbondo')) &&
+      (lower.includes('aco') || lower.includes('tr'))
+    ) {
+      requests.push(...buildAcoST12FormatRequests(sheetId));
+    } else if (lower.includes('ups') || lower.includes('cetak_ups')) {
+      requests.push(...buildUpsFormatRequests(sheetId));
+    }
+
+    // Also format data rows (rows 6..300) with borders and center alignment
+    requests.push({
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: 5,
+          endRowIndex: 300,
+          startColumnIndex: 0,
+          endColumnIndex: 18,
+        },
+        cell: {
+          userEnteredFormat: {
+            horizontalAlignment: 'CENTER',
+            verticalAlignment: 'MIDDLE',
+            textFormat: { fontFamily: 'Arial', fontSize: 10 },
+            borders: {
+              top: { style: 'SOLID', color: { red: 0.8, green: 0.835, blue: 0.882 } },
+              bottom: { style: 'SOLID', color: { red: 0.8, green: 0.835, blue: 0.882 } },
+              left: { style: 'SOLID', color: { red: 0.8, green: 0.835, blue: 0.882 } },
+              right: { style: 'SOLID', color: { red: 0.8, green: 0.835, blue: 0.882 } },
+            },
+          },
+        },
+        fields: 'userEnteredFormat(horizontalAlignment,verticalAlignment,textFormat,borders)',
+      },
+    });
+  }
+
+  if (requests.length > 0) {
+    const batchRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ requests }),
+      }
+    );
+
+    if (!batchRes.ok) {
+      const err = await batchRes.json();
+      throw new Error(err.error?.message || 'Gagal menerapkan format ke spreadsheet.');
+    }
+  }
+
+  return {
+    success: true,
+    message: 'Tampilan semua lembar Google Spreadsheet berhasil dirapikan sesuai standar resmi PLN!',
+  };
+}
+
+/**
+ * Clear a specific shift row slot in Google Sheets without deleting rows or disrupting structure.
+ */
+export async function clearShiftSlotInGoogleSheets(
+  accessToken: string,
+  spreadsheetId: string,
+  targetSheet: string,
+  baseStartRow: number,
+  dayOfMonth: number,
+  shift: ShiftType | string,
+  numCols: number = 17
+): Promise<{ success: boolean; message: string }> {
+  const targetRow = calculateSlotRow(dayOfMonth, shift, baseStartRow);
+  const endColChar = String.fromCharCode(64 + numCols); // 17 -> Q, 18 -> R
+
+  // Empty values preserving structure
+  const emptyRow = Array(numCols).fill('-');
+  // If Pagi (first row of group), keep the day number in Col A
+  const shiftOffset = getShiftOffset(shift);
+  if (shiftOffset === 0) {
+    emptyRow[0] = String(dayOfMonth);
+  } else {
+    emptyRow[0] = '';
+  }
+
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
+      targetSheet
+    )}!A${targetRow}:${endColChar}${targetRow}?valueInputOption=USER_ENTERED`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        range: `${targetSheet}!A${targetRow}:${endColChar}${targetRow}`,
+        majorDimension: 'ROWS',
+        values: [emptyRow],
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || `Gagal mengosongkan baris shift ${shift} di baris ${targetRow}`);
+  }
+
+  return {
+    success: true,
+    message: `Baris slot Tanggal ${dayOfMonth} Shift ${shift} (Baris ${targetRow}) berhasil dikosongkan.`,
+  };
 }

@@ -27,8 +27,10 @@ import { TimRumdinForm } from './components/TimRumdinForm';
 import { ReportPreviewModal } from './components/ReportPreviewModal';
 import { HistoryModal } from './components/HistoryModal';
 import { GoogleSheetsModal } from './components/GoogleSheetsModal';
+import { ShiftHandoverNotification } from './components/ShiftHandoverNotification';
+import { ShiftScheduleModal } from './components/ShiftScheduleModal';
 import { User } from 'firebase/auth';
-import { initAuth, googleSignIn, logout, auth } from './services/googleAuth';
+import { initAuth, googleSignIn, logout, auth, getCachedGoogleUser, getAccessToken } from './services/googleAuth';
 import {
   ActiveSpreadsheetInfo,
   getStoredSpreadsheet,
@@ -39,7 +41,22 @@ import {
   appendRumdinUpsRecords,
   appendWapresUpsRecords,
   appendAllRumdinRecords,
+  clearShiftSlotInGoogleSheets,
+  extractDayOfMonth,
 } from './services/googleSheets';
+import {
+  getStoredWebhookUrl,
+  saveStoredWebhookUrl,
+  getStoredSheetLink,
+  saveStoredSheetLink,
+  syncAcoTmViaWebhook,
+  syncAcoDipoViaWebhook,
+  syncAcoST12ViaWebhook,
+  syncUpsWapresViaWebhook,
+  syncUpsRumdinViaWebhook,
+  syncAllViaWebhook,
+  clearShiftViaWebhook,
+} from './services/webhookSync';
 import {
   CheckCircle2,
   AlertCircle,
@@ -60,9 +77,19 @@ export default function App() {
   // Reports state
   const [allReports, setAllReports] = useState<CombinedShiftReport[]>(() => getAllReports());
 
-  // Google Auth & Sheets states
-  const [currentUser, setCurrentUser] = useState<User | null>(() => auth.currentUser);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  // Direct Webhook state (No Login Required)
+  const [directWebhookUrl, setDirectWebhookUrl] = useState<string | null>(() => getStoredWebhookUrl());
+  const [directSheetLink, setDirectSheetLink] = useState<string | null>(() => getStoredSheetLink());
+
+  // Google Auth & Sheets states (OAuth Mode)
+  const [currentUser, setCurrentUser] = useState<User | any>(() => auth.currentUser || getCachedGoogleUser());
+  const [accessToken, setAccessToken] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('monitoring_shift_google_access_token');
+    } catch {
+      return null;
+    }
+  });
   const [activeSpreadsheet, setActiveSpreadsheet] = useState<ActiveSpreadsheetInfo | null>(() =>
     getStoredSpreadsheet()
   );
@@ -71,6 +98,20 @@ export default function App() {
   });
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState<boolean>(false);
   const [isSyncingSheets, setIsSyncingSheets] = useState<boolean>(false);
+  const [isShiftScheduleOpen, setIsShiftScheduleOpen] = useState<boolean>(false);
+
+  const handleUpdateWebhookUrl = (url: string | null) => {
+    setDirectWebhookUrl(url);
+    saveStoredWebhookUrl(url);
+    if (url) {
+      showToast('✅ Webhook Google Sheets terhubung! Semua petugas shift bisa mengirim laporan tanpa login.', 'success');
+    }
+  };
+
+  const handleUpdateSheetLink = (link: string | null) => {
+    setDirectSheetLink(link);
+    saveStoredSheetLink(link);
+  };
 
   // Current active combined report
   const currentReport = useMemo(() => {
@@ -100,7 +141,7 @@ export default function App() {
     null
   );
 
-  // Firebase auth state listener
+  // Firebase auth state listener with localStorage session recovery
   useEffect(() => {
     const unsubscribe = initAuth(
       (u, token) => {
@@ -108,7 +149,14 @@ export default function App() {
         setAccessToken(token);
       },
       () => {
-        setCurrentUser(auth.currentUser);
+        const storedToken = localStorage.getItem('monitoring_shift_google_access_token');
+        const storedUser = getCachedGoogleUser();
+        if (storedToken && storedUser) {
+          setCurrentUser(storedUser);
+          setAccessToken(storedToken);
+        } else {
+          setCurrentUser(auth.currentUser);
+        }
       }
     );
     return () => unsubscribe();
@@ -193,6 +241,20 @@ export default function App() {
   };
 
   const handleQuickSyncAco = async () => {
+    if (directWebhookUrl) {
+      try {
+        setIsSyncingSheets(true);
+        await syncAcoTmViaWebhook(directWebhookUrl, wapresData, selectedShift);
+        showToast('📊 Status ACO TM Gardu D 126 berhasil diperbarui di Google Sheets!');
+      } catch (err: any) {
+        console.error('Webhook sync ACO TM error:', err);
+        showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
+      } finally {
+        setIsSyncingSheets(false);
+      }
+      return;
+    }
+
     if (!accessToken || !activeSpreadsheet) {
       setIsSheetsModalOpen(true);
       return;
@@ -205,9 +267,10 @@ export default function App() {
         accessToken,
         activeSpreadsheet.id,
         targetSheet,
-        wapresData
+        wapresData,
+        selectedShift
       );
-      showToast('📊 Status ACO TM Gardu D 126 berhasil dikirim ke Google Sheets!');
+      showToast('📊 Status ACO TM Gardu D 126 berhasil diperbarui di Google Sheets!');
     } catch (err: any) {
       console.error('Quick sync ACO TM error:', err);
       showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
@@ -217,6 +280,20 @@ export default function App() {
   };
 
   const handleQuickSyncDipo = async () => {
+    if (directWebhookUrl) {
+      try {
+        setIsSyncingSheets(true);
+        await syncAcoDipoViaWebhook(directWebhookUrl, rumdinData, selectedShift);
+        showToast('📊 Status ACO TR DIPO berhasil diperbarui di Google Sheets!');
+      } catch (err: any) {
+        console.error('Webhook sync Dipo error:', err);
+        showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
+      } finally {
+        setIsSyncingSheets(false);
+      }
+      return;
+    }
+
     if (!accessToken || !activeSpreadsheet) {
       setIsSheetsModalOpen(true);
       return;
@@ -228,9 +305,10 @@ export default function App() {
         accessToken,
         activeSpreadsheet.id,
         targetSheet,
-        rumdinData
+        rumdinData,
+        selectedShift
       );
-      showToast('📊 Status ACO TR DIPO berhasil dikirim ke Google Sheets!');
+      showToast('📊 Status ACO TR DIPO berhasil diperbarui di Google Sheets!');
     } catch (err: any) {
       console.error('Quick sync Dipo error:', err);
       showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
@@ -240,6 +318,20 @@ export default function App() {
   };
 
   const handleQuickSyncST12 = async () => {
+    if (directWebhookUrl) {
+      try {
+        setIsSyncingSheets(true);
+        await syncAcoST12ViaWebhook(directWebhookUrl, rumdinData, selectedShift);
+        showToast('📊 Status ACO TR ST 12 berhasil diperbarui di Google Sheets!');
+      } catch (err: any) {
+        console.error('Webhook sync ST12 error:', err);
+        showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
+      } finally {
+        setIsSyncingSheets(false);
+      }
+      return;
+    }
+
     if (!accessToken || !activeSpreadsheet) {
       setIsSheetsModalOpen(true);
       return;
@@ -251,9 +343,10 @@ export default function App() {
         accessToken,
         activeSpreadsheet.id,
         targetSheet,
-        rumdinData
+        rumdinData,
+        selectedShift
       );
-      showToast('📊 Status ACO TR ST 12 berhasil dikirim ke Google Sheets!');
+      showToast('📊 Status ACO TR ST 12 berhasil diperbarui di Google Sheets!');
     } catch (err: any) {
       console.error('Quick sync ST12 error:', err);
       showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
@@ -263,6 +356,20 @@ export default function App() {
   };
 
   const handleQuickSyncRumdinUps = async () => {
+    if (directWebhookUrl) {
+      try {
+        setIsSyncingSheets(true);
+        await syncUpsRumdinViaWebhook(directWebhookUrl, rumdinData, selectedShift);
+        showToast('⚡ Beban UPS Rumdin (Dipo & ST12) berhasil diperbarui di Google Sheets!');
+      } catch (err: any) {
+        console.error('Webhook sync UPS Rumdin error:', err);
+        showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
+      } finally {
+        setIsSyncingSheets(false);
+      }
+      return;
+    }
+
     if (!accessToken || !activeSpreadsheet) {
       setIsSheetsModalOpen(true);
       return;
@@ -273,9 +380,10 @@ export default function App() {
         accessToken,
         activeSpreadsheet.id,
         activeSpreadsheet.sheetTabs || activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS',
-        rumdinData
+        rumdinData,
+        selectedShift
       );
-      showToast('⚡ Beban UPS Rumdin (Dipo & ST12) berhasil dikirim ke Google Sheets!');
+      showToast('⚡ Beban UPS Rumdin (Dipo & ST12) berhasil diperbarui di Google Sheets!');
     } catch (err: any) {
       console.error('Quick sync UPS Rumdin error:', err);
       showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
@@ -285,6 +393,20 @@ export default function App() {
   };
 
   const handleQuickSyncWapresUps = async () => {
+    if (directWebhookUrl) {
+      try {
+        setIsSyncingSheets(true);
+        await syncUpsWapresViaWebhook(directWebhookUrl, wapresData, selectedShift);
+        showToast('⚡ Beban UPS Wapres (30, 40, 60 KVA) berhasil diperbarui di Google Sheets!');
+      } catch (err: any) {
+        console.error('Webhook sync UPS Wapres error:', err);
+        showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
+      } finally {
+        setIsSyncingSheets(false);
+      }
+      return;
+    }
+
     if (!accessToken || !activeSpreadsheet) {
       setIsSheetsModalOpen(true);
       return;
@@ -295,9 +417,10 @@ export default function App() {
         accessToken,
         activeSpreadsheet.id,
         activeSpreadsheet.sheetTabs || activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS',
-        wapresData
+        wapresData,
+        selectedShift
       );
-      showToast('⚡ Beban UPS Wapres (30, 40, 60 KVA) berhasil dikirim ke Google Sheets!');
+      showToast('⚡ Beban UPS Wapres (30, 40, 60 KVA) berhasil diperbarui di Google Sheets!');
     } catch (err: any) {
       console.error('Quick sync UPS Wapres error:', err);
       showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
@@ -307,6 +430,22 @@ export default function App() {
   };
 
   const handleQuickSyncAllRumdin = async () => {
+    if (directWebhookUrl) {
+      try {
+        setIsSyncingSheets(true);
+        await syncAcoDipoViaWebhook(directWebhookUrl, rumdinData, selectedShift);
+        await syncAcoST12ViaWebhook(directWebhookUrl, rumdinData, selectedShift);
+        await syncUpsRumdinViaWebhook(directWebhookUrl, rumdinData, selectedShift);
+        showToast('🚀 Semua data Tim Rumdin (Dipo, ST12, UPS) berhasil diperbarui di Google Sheets!');
+      } catch (err: any) {
+        console.error('Webhook sync all Rumdin error:', err);
+        showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
+      } finally {
+        setIsSyncingSheets(false);
+      }
+      return;
+    }
+
     if (!accessToken || !activeSpreadsheet) {
       setIsSheetsModalOpen(true);
       return;
@@ -317,9 +456,10 @@ export default function App() {
         accessToken,
         activeSpreadsheet.id,
         rumdinData,
-        activeSpreadsheet.sheetTabs
+        activeSpreadsheet.sheetTabs,
+        selectedShift
       );
-      showToast('🚀 Semua data Tim Rumdin (Dipo, ST12, UPS) berhasil dikirim ke Google Sheets!');
+      showToast('🚀 Semua data Tim Rumdin (Dipo, ST12, UPS) berhasil diperbarui di Google Sheets!');
     } catch (err: any) {
       console.error('Quick sync all Rumdin error:', err);
       showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
@@ -329,6 +469,20 @@ export default function App() {
   };
 
   const handleQuickSyncAll = async () => {
+    if (directWebhookUrl) {
+      try {
+        setIsSyncingSheets(true);
+        await syncAllViaWebhook(directWebhookUrl, wapresData, rumdinData, selectedShift);
+        showToast('✨ Seluruh data shift (Wapres & Rumdin) berhasil diperbarui di Google Sheets!');
+      } catch (err: any) {
+        console.error('Webhook sync all error:', err);
+        showToast(`Gagal sync semua data: ${err.message}`, 'info');
+      } finally {
+        setIsSyncingSheets(false);
+      }
+      return;
+    }
+
     if (!accessToken || !activeSpreadsheet) {
       setIsSheetsModalOpen(true);
       return;
@@ -337,13 +491,13 @@ export default function App() {
       setIsSyncingSheets(true);
       // Sync Wapres ACO TM
       const tmSheet = activeSpreadsheet.sheetTabs?.acoTM || activeSpreadsheet.sheetName || 'ACO TM D 126';
-      await appendAcoWapresRecord(accessToken, activeSpreadsheet.id, tmSheet, wapresData);
+      await appendAcoWapresRecord(accessToken, activeSpreadsheet.id, tmSheet, wapresData, selectedShift);
       // Sync Wapres UPS
       const upsSheet = activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS';
-      await appendWapresUpsRecords(accessToken, activeSpreadsheet.id, upsSheet, wapresData);
+      await appendWapresUpsRecords(accessToken, activeSpreadsheet.id, upsSheet, wapresData, selectedShift);
       // Sync All Rumdin (Dipo, ST12, UPS)
-      await appendAllRumdinRecords(accessToken, activeSpreadsheet.id, rumdinData, activeSpreadsheet.sheetTabs);
-      showToast('✨ Seluruh data shift (Wapres & Rumdin) berhasil disinkronkan ke Google Sheets!');
+      await appendAllRumdinRecords(accessToken, activeSpreadsheet.id, rumdinData, activeSpreadsheet.sheetTabs, selectedShift);
+      showToast('✨ Seluruh data shift (Wapres & Rumdin) berhasil diperbarui di Google Sheets!');
     } catch (err: any) {
       console.error('Quick sync all error:', err);
       showToast(`Gagal sync semua data: ${err.message}`, 'info');
@@ -359,30 +513,45 @@ export default function App() {
     showToast(`✅ Laporan Tim Wapres berhasil disimpan pada ${submittedData.inspectionTime}!`);
 
     // Real-time synchronization to Google Sheets
-    if (accessToken && activeSpreadsheet && autoSyncEnabled) {
-      try {
-        setIsSyncingSheets(true);
-        const tmSheet = activeSpreadsheet.sheetTabs?.acoTM || activeSpreadsheet.sheetName || 'ACO TM D 126';
-        await appendAcoWapresRecord(
-          accessToken,
-          activeSpreadsheet.id,
-          tmSheet,
-          submittedData
-        );
-        // Also sync Wapres UPS if filled
-        const upsSheet = activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS';
-        await appendWapresUpsRecords(
-          accessToken,
-          activeSpreadsheet.id,
-          upsSheet,
-          submittedData
-        );
-        showToast('📊 Data ACO TM & UPS Wapres otomatis terinput ke Google Sheets!');
-      } catch (err: any) {
-        console.error('Auto sync to Google Sheets failed:', err);
-        showToast(`⚠️ Laporan disimpan lokal. Sync Sheets gagal: ${err.message}`, 'info');
-      } finally {
-        setIsSyncingSheets(false);
+    if (autoSyncEnabled) {
+      if (directWebhookUrl) {
+        try {
+          setIsSyncingSheets(true);
+          await syncAcoTmViaWebhook(directWebhookUrl, submittedData, selectedShift);
+          await syncUpsWapresViaWebhook(directWebhookUrl, submittedData, selectedShift);
+          showToast('📊 Data ACO TM & UPS Wapres otomatis diperbarui di Google Sheets!');
+        } catch (err: any) {
+          console.error('Webhook auto sync Wapres failed:', err);
+        } finally {
+          setIsSyncingSheets(false);
+        }
+      } else if (accessToken && activeSpreadsheet) {
+        try {
+          setIsSyncingSheets(true);
+          const tmSheet = activeSpreadsheet.sheetTabs?.acoTM || activeSpreadsheet.sheetName || 'ACO TM D 126';
+          await appendAcoWapresRecord(
+            accessToken,
+            activeSpreadsheet.id,
+            tmSheet,
+            submittedData,
+            selectedShift
+          );
+          // Also sync Wapres UPS if filled
+          const upsSheet = activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS';
+          await appendWapresUpsRecords(
+            accessToken,
+            activeSpreadsheet.id,
+            upsSheet,
+            submittedData,
+            selectedShift
+          );
+          showToast('📊 Data ACO TM & UPS Wapres otomatis diperbarui di Google Sheets!');
+        } catch (err: any) {
+          console.error('Auto sync to Google Sheets failed:', err);
+          showToast(`⚠️ Laporan disimpan lokal. Sync Sheets gagal: ${err.message}`, 'info');
+        } finally {
+          setIsSyncingSheets(false);
+        }
       }
     }
 
@@ -400,21 +569,36 @@ export default function App() {
     showToast(`✅ Laporan Tim Rumdin berhasil disimpan pada ${submittedData.inspectionTime}!`);
 
     // Real-time synchronization to Google Sheets
-    if (accessToken && activeSpreadsheet && autoSyncEnabled) {
-      try {
-        setIsSyncingSheets(true);
-        await appendAllRumdinRecords(
-          accessToken,
-          activeSpreadsheet.id,
-          submittedData,
-          activeSpreadsheet.sheetTabs
-        );
-        showToast('📊 Data ACO Dipo, ST12, & UPS Rumdin otomatis terinput ke Google Sheets!');
-      } catch (err: any) {
-        console.error('Auto sync Rumdin to Google Sheets failed:', err);
-        showToast(`⚠️ Laporan disimpan lokal. Sync Sheets gagal: ${err.message}`, 'info');
-      } finally {
-        setIsSyncingSheets(false);
+    if (autoSyncEnabled) {
+      if (directWebhookUrl) {
+        try {
+          setIsSyncingSheets(true);
+          await syncAcoDipoViaWebhook(directWebhookUrl, submittedData, selectedShift);
+          await syncAcoST12ViaWebhook(directWebhookUrl, submittedData, selectedShift);
+          await syncUpsRumdinViaWebhook(directWebhookUrl, submittedData, selectedShift);
+          showToast('📊 Data ACO Dipo, ST12, & UPS Rumdin otomatis diperbarui di Google Sheets!');
+        } catch (err: any) {
+          console.error('Webhook auto sync Rumdin failed:', err);
+        } finally {
+          setIsSyncingSheets(false);
+        }
+      } else if (accessToken && activeSpreadsheet) {
+        try {
+          setIsSyncingSheets(true);
+          await appendAllRumdinRecords(
+            accessToken,
+            activeSpreadsheet.id,
+            submittedData,
+            activeSpreadsheet.sheetTabs,
+            selectedShift
+          );
+          showToast('📊 Data ACO Dipo, ST12, & UPS Rumdin otomatis diperbarui di Google Sheets!');
+        } catch (err: any) {
+          console.error('Auto sync Rumdin to Google Sheets failed:', err);
+          showToast(`⚠️ Laporan disimpan lokal. Sync Sheets gagal: ${err.message}`, 'info');
+        } finally {
+          setIsSyncingSheets(false);
+        }
       }
     }
 
@@ -437,10 +621,36 @@ export default function App() {
     setIsPreviewOpen(true);
   };
 
-  const handleDeleteReport = (id: string) => {
+  const handleDeleteReport = async (id: string) => {
+    const all = getAllReports();
+    const reportToDelete = all.find((r) => r.id === id);
+
     deleteReport(id);
     setAllReports(getAllReports());
     showToast('Laporan riwayat telah dihapus', 'info');
+
+    // Also clear the slot in Google Sheets if connected, maintaining table integrity
+    if (reportToDelete) {
+      const shift = reportToDelete.shift;
+      const dateVal = reportToDelete.dateKey;
+      if (directWebhookUrl) {
+        try {
+          await clearShiftViaWebhook(directWebhookUrl, dateVal, shift, 'ALL');
+          showToast(`Baris shift ${shift} (${reportToDelete.displayDate}) di Google Sheets berhasil dikosongkan.`, 'info');
+        } catch (e) {
+          console.error('Failed to clear sheet via webhook:', e);
+        }
+      } else if (accessToken && activeSpreadsheet) {
+        try {
+          const day = extractDayOfMonth(dateVal);
+          const tmSheet = activeSpreadsheet.sheetTabs?.acoTM || activeSpreadsheet.sheetName || 'ACO TM D 126';
+          await clearShiftSlotInGoogleSheets(accessToken, activeSpreadsheet.id, tmSheet, 6, day, shift, 17);
+          showToast(`Baris shift ${shift} (${reportToDelete.displayDate}) di Google Sheets berhasil dikosongkan.`, 'info');
+        } catch (e) {
+          console.error('Failed to clear sheet via API:', e);
+        }
+      }
+    }
   };
 
   const handleResetActiveForm = () => {
@@ -500,7 +710,8 @@ export default function App() {
         onLoadSample={handleLoadSample}
         historyCount={allReports.length}
         onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
-        isSheetsConnected={Boolean(currentUser && activeSpreadsheet)}
+        isSheetsConnected={Boolean(directWebhookUrl || (currentUser && activeSpreadsheet))}
+        onOpenShiftSchedule={() => setIsShiftScheduleOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -669,6 +880,10 @@ export default function App() {
         user={currentUser}
         accessToken={accessToken}
         activeSpreadsheet={activeSpreadsheet}
+        directWebhookUrl={directWebhookUrl}
+        onUpdateWebhookUrl={handleUpdateWebhookUrl}
+        directSheetLink={directSheetLink}
+        onUpdateSheetLink={handleUpdateSheetLink}
         onSignIn={handleGoogleSignIn}
         onSignOut={handleGoogleSignOut}
         onSpreadsheetUpdated={handleSpreadsheetUpdated}
@@ -680,6 +895,26 @@ export default function App() {
         onManualSyncRumdinUps={handleQuickSyncRumdinUps}
         onManualSyncWapresUps={handleQuickSyncWapresUps}
         onManualSyncAll={handleQuickSyncAll}
+      />
+
+      {/* Shift Handover Toast Notification */}
+      <ShiftHandoverNotification
+        currentShift={selectedShift}
+        isWapresSubmitted={isWapresSubmitted}
+        isRumdinSubmitted={isRumdinSubmitted}
+        onOpenReport={() => setIsPreviewOpen(true)}
+        onSyncSheets={handleQuickSyncAll}
+        isSheetsConnected={Boolean(directWebhookUrl || (accessToken && activeSpreadsheet))}
+      />
+
+      {/* Shift Schedule & Handover Settings Modal */}
+      <ShiftScheduleModal
+        isOpen={isShiftScheduleOpen}
+        onClose={() => setIsShiftScheduleOpen(false)}
+        currentShift={selectedShift}
+        onTriggerTestToast={() => {
+          showToast('🔔 Peringatan pergantian shift aktif! Periksa notifikasi visual di sudut layar.', 'info');
+        }}
       />
     </div>
   );
