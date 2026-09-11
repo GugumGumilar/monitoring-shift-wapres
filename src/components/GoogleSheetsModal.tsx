@@ -13,13 +13,15 @@ import {
   Sparkles,
   ArrowRight,
   ShieldCheck,
+  Building2,
+  Power,
+  Zap,
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import {
   ActiveSpreadsheetInfo,
-  createAcoWapresSpreadsheet,
+  createFullMonitoringSpreadsheet,
   connectExistingSpreadsheet,
-  extractSpreadsheetId,
 } from '../services/googleSheets';
 
 interface GoogleSheetsModalProps {
@@ -34,6 +36,11 @@ interface GoogleSheetsModalProps {
   autoSyncEnabled: boolean;
   onToggleAutoSync: (enabled: boolean) => void;
   onManualSyncCurrent: () => Promise<void>;
+  onManualSyncDipo?: () => Promise<void>;
+  onManualSyncST12?: () => Promise<void>;
+  onManualSyncRumdinUps?: () => Promise<void>;
+  onManualSyncWapresUps?: () => Promise<void>;
+  onManualSyncAll?: () => Promise<void>;
 }
 
 export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
@@ -48,6 +55,11 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
   autoSyncEnabled,
   onToggleAutoSync,
   onManualSyncCurrent,
+  onManualSyncDipo,
+  onManualSyncST12,
+  onManualSyncRumdinUps,
+  onManualSyncWapresUps,
+  onManualSyncAll,
 }) => {
   const [existingInput, setExistingInput] = useState('');
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -65,10 +77,10 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
       setLoadingAction('create');
       setErrorMessage(null);
       setSuccessMessage(null);
-      const created = await createAcoWapresSpreadsheet(accessToken);
+      const created = await createFullMonitoringSpreadsheet(accessToken);
       onSpreadsheetUpdated(created);
       setSuccessMessage(
-        'Berhasil membuat Google Spreadsheet baru dengan format resmi ACO TM Gardu D 126!'
+        'Berhasil membuat Google Spreadsheet baru lengkap dengan 4 lembar resmi (ACO TM D 126, ACO TR DIPO, ACO TR ST 12, dan LAPORAN_CETAK_UPS)!'
       );
     } catch (err: any) {
       setErrorMessage(err.message || 'Gagal membuat spreadsheet baru.');
@@ -103,15 +115,15 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
     }
   };
 
-  const handleManualSync = async () => {
+  const runSyncAction = async (actionName: string, syncFn: () => Promise<void>, label: string) => {
     try {
-      setLoadingAction('sync');
+      setLoadingAction(actionName);
       setErrorMessage(null);
       setSuccessMessage(null);
-      await onManualSyncCurrent();
-      setSuccessMessage('Data inspeksi ACO TM saat ini berhasil dikirim ke Google Sheets!');
+      await syncFn();
+      setSuccessMessage(`Berhasil! Data ${label} berhasil disinkronkan ke Google Sheets.`);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Gagal menyinkronkan data.');
+      setErrorMessage(err.message || `Gagal menyinkronkan data ${label}.`);
     } finally {
       setLoadingAction(null);
     }
@@ -124,7 +136,7 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
     >
       <div
         id="google-sheets-modal"
-        className="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 bg-zinc-950/60">
@@ -136,11 +148,11 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
               <h3 className="font-bold text-zinc-100 text-base sm:text-lg flex items-center gap-2">
                 Integrasi Google Sheets Real-Time
                 <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-mono px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  Pantauan ACO Wapres
+                  Wapres & Rumdin
                 </span>
               </h3>
               <p className="text-xs text-zinc-400">
-                Otomatis mengisi baris data Pantauan Inspeksi ACO TM Gardu D 126
+                Otomatis mengisi baris data Pantauan ACO TM D 126, ACO TR Rumdin (Dipo & ST12) dan Beban UPS
               </p>
             </div>
           </div>
@@ -243,7 +255,7 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
             </div>
           </div>
 
-          {/* Section 2: Active Spreadsheet */}
+          {/* Section 2: Active Spreadsheet & Tabs */}
           <div className="bg-zinc-950/70 border border-zinc-800 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
@@ -258,16 +270,29 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
             </div>
 
             {activeSpreadsheet ? (
-              <div className="bg-zinc-900 border border-emerald-500/30 rounded-xl p-3.5 space-y-2.5">
+              <div className="bg-zinc-900 border border-emerald-500/30 rounded-xl p-3.5 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="font-bold text-zinc-100 text-sm flex items-center gap-2">
                       <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
                       <span>{activeSpreadsheet.title}</span>
                     </div>
-                    <div className="text-xs text-zinc-400 mt-0.5">
-                      Lembar: <span className="font-mono text-zinc-300 font-semibold">{activeSpreadsheet.sheetName}</span> | ID:{' '}
-                      <span className="font-mono text-zinc-500">{activeSpreadsheet.id.slice(0, 16)}...</span>
+                    <div className="text-xs text-zinc-400 mt-1">
+                      Target Lembar Terdeteksi:
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      <span className="text-[11px] font-mono bg-zinc-800 px-2 py-0.5 rounded text-emerald-300 border border-emerald-500/20">
+                        1. {activeSpreadsheet.sheetTabs?.acoTM || 'ACO TM D 126'}
+                      </span>
+                      <span className="text-[11px] font-mono bg-zinc-800 px-2 py-0.5 rounded text-blue-300 border border-blue-500/20">
+                        2. {activeSpreadsheet.sheetTabs?.acoTRDipo || 'ACO TR DIPO'}
+                      </span>
+                      <span className="text-[11px] font-mono bg-zinc-800 px-2 py-0.5 rounded text-purple-300 border border-purple-500/20">
+                        3. {activeSpreadsheet.sheetTabs?.acoTRST12 || 'ACO TR ST 12'}
+                      </span>
+                      <span className="text-[11px] font-mono bg-zinc-800 px-2 py-0.5 rounded text-amber-300 border border-amber-500/20">
+                        4. {activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS'}
+                      </span>
                     </div>
                   </div>
 
@@ -292,31 +317,137 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
                       className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 focus:ring-offset-zinc-900"
                     />
                     <span className="text-xs text-zinc-300 font-medium">
-                      Otomatis input ke Spreadsheet saat petugas klik "Simpan Laporan"
+                      Otomatis sync ke Spreadsheet saat petugas klik "Simpan Laporan"
                     </span>
                   </label>
+                </div>
 
-                  <button
-                    type="button"
-                    onClick={handleManualSync}
-                    disabled={loadingAction === 'sync'}
-                    className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-950/60 hover:bg-emerald-950 border border-emerald-500/30 px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer"
-                  >
-                    {loadingAction === 'sync' ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-3.5 h-3.5" />
+                {/* Manual Sync Options Grid */}
+                <div className="pt-2 border-t border-zinc-800 space-y-1.5">
+                  <div className="text-[11px] font-semibold text-zinc-400">
+                    Sinkronisasi Manual Baris Data Terkini:
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => runSyncAction('sync-tm', onManualSyncCurrent, 'ACO TM Gardu D 126')}
+                      disabled={Boolean(loadingAction)}
+                      className="inline-flex items-center justify-between text-xs text-emerald-300 bg-zinc-950 hover:bg-emerald-950/40 border border-emerald-500/30 px-3 py-2 rounded-lg font-medium transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Kirim ACO TM Wapres</span>
+                      </span>
+                      {loadingAction === 'sync-tm' ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3.5 h-3.5 opacity-60" />
+                      )}
+                    </button>
+
+                    {onManualSyncDipo && (
+                      <button
+                        type="button"
+                        onClick={() => runSyncAction('sync-dipo', onManualSyncDipo, 'ACO TR DIPO')}
+                        disabled={Boolean(loadingAction)}
+                        className="inline-flex items-center justify-between text-xs text-blue-300 bg-zinc-950 hover:bg-blue-950/40 border border-blue-500/30 px-3 py-2 rounded-lg font-medium transition-colors cursor-pointer"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                          <span>Kirim ACO TR DIPO</span>
+                        </span>
+                        {loadingAction === 'sync-dipo' ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5 opacity-60" />
+                        )}
+                      </button>
                     )}
-                    <span>Kirim Data Sekarang</span>
-                  </button>
+
+                    {onManualSyncST12 && (
+                      <button
+                        type="button"
+                        onClick={() => runSyncAction('sync-st12', onManualSyncST12, 'ACO TR ST 12')}
+                        disabled={Boolean(loadingAction)}
+                        className="inline-flex items-center justify-between text-xs text-purple-300 bg-zinc-950 hover:bg-purple-950/40 border border-purple-500/30 px-3 py-2 rounded-lg font-medium transition-colors cursor-pointer"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Power className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Kirim ACO TR ST 12</span>
+                        </span>
+                        {loadingAction === 'sync-st12' ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5 opacity-60" />
+                        )}
+                      </button>
+                    )}
+
+                    {onManualSyncRumdinUps && (
+                      <button
+                        type="button"
+                        onClick={() => runSyncAction('sync-ups-rumdin', onManualSyncRumdinUps, 'UPS Rumdin (40 & 100 KVA)')}
+                        disabled={Boolean(loadingAction)}
+                        className="inline-flex items-center justify-between text-xs text-amber-300 bg-zinc-950 hover:bg-amber-950/40 border border-amber-500/30 px-3 py-2 rounded-lg font-medium transition-colors cursor-pointer"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Kirim UPS Rumdin</span>
+                        </span>
+                        {loadingAction === 'sync-ups-rumdin' ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5 opacity-60" />
+                        )}
+                      </button>
+                    )}
+
+                    {onManualSyncWapresUps && (
+                      <button
+                        type="button"
+                        onClick={() => runSyncAction('sync-ups-wapres', onManualSyncWapresUps, 'UPS Wapres (30, 40, 60 KVA)')}
+                        disabled={Boolean(loadingAction)}
+                        className="inline-flex items-center justify-between text-xs text-emerald-300 bg-zinc-950 hover:bg-emerald-950/40 border border-emerald-500/30 px-3 py-2 rounded-lg font-medium transition-colors cursor-pointer"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Kirim UPS Wapres</span>
+                        </span>
+                        {loadingAction === 'sync-ups-wapres' ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5 opacity-60" />
+                        )}
+                      </button>
+                    )}
+
+                    {onManualSyncAll && (
+                      <button
+                        type="button"
+                        onClick={() => runSyncAction('sync-all', onManualSyncAll, 'Semua Tim Rumdin & Wapres')}
+                        disabled={Boolean(loadingAction)}
+                        className="inline-flex items-center justify-between text-xs text-white bg-emerald-900/60 hover:bg-emerald-800/80 border border-emerald-500/50 px-3 py-2 rounded-lg font-bold transition-colors cursor-pointer"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Kirim Semua Data Shift</span>
+                        </span>
+                        {loadingAction === 'sync-all' ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (
               <div className="text-center py-5 bg-zinc-900/50 rounded-xl border border-dashed border-zinc-800 space-y-3">
                 <FileSpreadsheet className="w-10 h-10 text-zinc-600 mx-auto" />
                 <div className="text-xs text-zinc-400 max-w-sm mx-auto">
-                  Belum ada spreadsheet yang terhubung. Buat spreadsheet baru otomatis dengan format
-                  resmi ACO TM atau sambungkan spreadsheet yang sudah Anda miliki.
+                  Belum ada spreadsheet yang terhubung. Buat spreadsheet baru otomatis dengan 4 lembar resmi
+                  atau sambungkan spreadsheet yang sudah Anda miliki.
                 </div>
               </div>
             )}
@@ -334,12 +465,12 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
                 ) : (
                   <Plus className="w-4 h-4" />
                 )}
-                <span>Buat Spreadsheet Baru Otomatis</span>
+                <span>Buat Spreadsheet Baru (4 Tab Lengkap)</span>
               </button>
 
               <div className="text-[11px] text-zinc-400 flex items-center gap-1.5 p-2 bg-zinc-900 rounded-xl border border-zinc-800">
                 <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>Format otomatis dibuat persis sesuai tabel Pantauan Inspeksi ACO TM (Kolom A-Q, Header Kuning Emas).</span>
+                <span>Otomatis memformat tab ACO TM D 126, ACO TR DIPO, ACO TR ST 12 & LAPORAN_CETAK_UPS dengan header emas.</span>
               </div>
             </div>
           </div>
@@ -381,24 +512,24 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
           </form>
 
           {/* Reference Format Info */}
-          <div className="bg-zinc-900/90 border border-amber-500/20 rounded-xl p-3.5 text-xs text-zinc-400 space-y-1.5">
+          <div className="bg-zinc-900/90 border border-amber-500/20 rounded-xl p-3.5 text-xs text-zinc-400 space-y-2">
             <div className="font-semibold text-amber-300 flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Format Kolom Spreadsheet (Sesuai Gambar Pantauan ACO Wapres):</span>
+              <span>Format Kolom & Lembar Spreadsheet Resmi:</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 font-mono text-[11px] text-zinc-300 pt-1">
-              <div>A: NO</div>
-              <div>B: NAMA PETUGAS</div>
-              <div>C: TANGGAL/BLN/THN</div>
-              <div>D: JAM INSPEKSI</div>
-              <div>E: PENYULANG CLOSE</div>
-              <div>F: PENYULANG OPEN</div>
-              <div>G-H: ALARM (ALARM/NORMAL)</div>
-              <div>I-J: POWER (ON/OFF)</div>
-              <div>K-L: CHARGE (YA/TDK)</div>
-              <div>M-N: REMOTE (LOCAL/AUTO)</div>
-              <div>O-P: LAMPU (ON/OFF)</div>
-              <div>Q: KETERANGAN</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-zinc-300 pt-1">
+              <div className="bg-zinc-950 p-2 rounded border border-zinc-800">
+                <span className="text-emerald-400 font-bold block mb-1">ACO TM D 126 & ACO TR ST 12</span>
+                <span>NO | PETUGAS | TGL/BLN/THN | JAM | CLOSE | OPEN | ALARM | POWER | CHARGING | REMOTE | LAMPU | KET</span>
+              </div>
+              <div className="bg-zinc-950 p-2 rounded border border-zinc-800">
+                <span className="text-blue-400 font-bold block mb-1">ACO TR DIPO (Image 2)</span>
+                <span>NO | PETUGAS | TGL/BLN/THN | JAM | GARDU T15N | GARDU T135 | ALARM | POWER | CHARGING | REMOTE | LAMPU | KET</span>
+              </div>
+              <div className="bg-zinc-950 p-2 rounded border border-zinc-800 sm:col-span-2">
+                <span className="text-amber-400 font-bold block mb-1">LAPORAN_CETAK_UPS (Dipo, ST12, Wapres)</span>
+                <span>NO | PETUGAS | TGL | JAM | UNIT UPS | BEBAN (R,S,T) | V FASA-NETRAL (R-N,S-N,T-N) | V ANTAR-FASA (R-S,S-T,R-T) | SUHU | ALARM | BACKUP | KET</span>
+              </div>
             </div>
           </div>
         </div>

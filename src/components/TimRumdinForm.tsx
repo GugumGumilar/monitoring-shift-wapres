@@ -2,8 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { AcoTRDipoData, AcoTRST12Data, TimRumdinReport } from '../types';
 import { OfficerSelect } from './OfficerSelect';
 import { UPSFormCard } from './UPSFormCard';
+import { GoogleSheetsSyncBar } from './GoogleSheetsSyncBar';
+import { ActiveSpreadsheetInfo } from '../services/googleSheets';
+import { User } from 'firebase/auth';
 import { formatIndonesianDate, formatIndonesianTime } from '../utils/formatters';
-import { Power, ShieldCheck, CheckCircle2, AlertTriangle, Building2, Clock, Calendar } from 'lucide-react';
+import {
+  Power,
+  ShieldCheck,
+  CheckCircle2,
+  AlertTriangle,
+  Building2,
+  Clock,
+  Calendar,
+  FileSpreadsheet,
+  RefreshCw,
+  Zap,
+} from 'lucide-react';
 
 interface TimRumdinFormProps {
   data: TimRumdinReport;
@@ -11,6 +25,15 @@ interface TimRumdinFormProps {
   onSubmit: (data: TimRumdinReport) => void;
   shiftName: string;
   isAlreadySubmitted?: boolean;
+  user?: User | null;
+  activeSpreadsheet?: ActiveSpreadsheetInfo | null;
+  autoSyncEnabled?: boolean;
+  onOpenGoogleSheets?: () => void;
+  onQuickSyncDipo?: () => void;
+  onQuickSyncST12?: () => void;
+  onQuickSyncRumdinUps?: () => void;
+  onQuickSyncAllRumdin?: () => void;
+  isSyncingSheets?: boolean;
 }
 
 export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
@@ -19,6 +42,15 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
   onSubmit,
   shiftName,
   isAlreadySubmitted = false,
+  user = null,
+  activeSpreadsheet = null,
+  autoSyncEnabled = true,
+  onOpenGoogleSheets,
+  onQuickSyncDipo,
+  onQuickSyncST12,
+  onQuickSyncRumdinUps,
+  onQuickSyncAllRumdin,
+  isSyncingSheets = false,
 }) => {
   const [liveTime, setLiveTime] = useState<string>(formatIndonesianTime());
   const [liveDate, setLiveDate] = useState<string>(formatIndonesianDate());
@@ -157,6 +189,16 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
         )}
       </div>
 
+      {/* Google Sheets Real-Time Sync Bar */}
+      <GoogleSheetsSyncBar
+        user={user}
+        activeSpreadsheet={activeSpreadsheet}
+        autoSyncEnabled={autoSyncEnabled}
+        onOpenSettings={onOpenGoogleSheets || (() => {})}
+        onQuickSync={onQuickSyncAllRumdin || (() => {})}
+        isSyncing={isSyncingSheets}
+      />
+
       {/* 1. Officer Selection */}
       <OfficerSelect
         selectedOfficers={data.officers}
@@ -166,14 +208,30 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
 
       {/* 2. ACO TR Dipo */}
       <div id="aco-tr-dipo-card" className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 md:p-5 space-y-4 shadow-sm">
-        <div className="flex items-center gap-2.5 border-b border-zinc-800 pb-3">
-          <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
-            <Building2 className="w-5 h-5" />
+        <div className="flex items-center justify-between border-b border-zinc-800 pb-3 gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-zinc-100 text-base">Pantauan UPS Dan ACO TR Rumdin Wapres (Dipo)</h3>
+              <p className="text-xs text-zinc-400">Gardu T135, Gardu T15N, Alarm, Power & Indikator</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-zinc-100 text-base">Pantauan UPS Dan ACO TR Rumdin Wapres (Dipo)</h3>
-            <p className="text-xs text-zinc-400">Gardu T135, Gardu T15N, Alarm, Power & Indikator</p>
-          </div>
+
+          {activeSpreadsheet && onQuickSyncDipo && (
+            <button
+              type="button"
+              onClick={onQuickSyncDipo}
+              disabled={isSyncingSheets}
+              title="Kirim data inspeksi ACO TR DIPO ke Google Sheets"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/30 transition-colors shrink-0 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSheets ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Kirim Dipo ke Sheets</span>
+              <span className="sm:hidden">Sync Dipo</span>
+            </button>
+          )}
         </div>
 
         {/* Status ACO TR: Gardu T135 and Gardu T15N */}
@@ -329,14 +387,30 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
 
       {/* 3. ACO TR ST12 */}
       <div id="aco-tr-st12-card" className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 md:p-5 space-y-4 shadow-sm">
-        <div className="flex items-center gap-2.5 border-b border-zinc-800 pb-3">
-          <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
-            <Power className="w-5 h-5" />
+        <div className="flex items-center justify-between border-b border-zinc-800 pb-3 gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <Power className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-zinc-100 text-base">Pantauan Inspeksi ACO TR Rumdin Wapres (ST12)</h3>
+              <p className="text-xs text-zinc-400">Gardu T93, Gardu T10B, Alarm, Power & Indikator</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-zinc-100 text-base">Pantauan Inspeksi ACO TR Rumdin Wapres (ST12)</h3>
-            <p className="text-xs text-zinc-400">Gardu T93, Gardu T10B, Alarm, Power & Indikator</p>
-          </div>
+
+          {activeSpreadsheet && onQuickSyncST12 && (
+            <button
+              type="button"
+              onClick={onQuickSyncST12}
+              disabled={isSyncingSheets}
+              title="Kirim data inspeksi ACO TR ST 12 ke Google Sheets"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/30 transition-colors shrink-0 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSheets ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Kirim ST12 ke Sheets</span>
+              <span className="sm:hidden">Sync ST12</span>
+            </button>
+          )}
         </div>
 
         {/* Status ACO TR: Gardu T93 and Gardu T10B */}
@@ -495,6 +569,32 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
         </div>
       </div>
 
+      {/* 4 & 5. Section Header UPS Rumdin with Quick Sync */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2 border-t border-zinc-800">
+        <div>
+          <h3 className="font-bold text-zinc-100 text-sm flex items-center gap-2">
+            <Zap className="w-4 h-4 text-amber-400" />
+            <span>Pantauan Beban & Tegangan UPS Rumdin</span>
+          </h3>
+          <p className="text-xs text-zinc-400">
+            UPS 40 KVA Rumdin (Dipo) & UPS 100 KVA Rumdin (ST12)
+          </p>
+        </div>
+
+        {activeSpreadsheet && onQuickSyncRumdinUps && (
+          <button
+            type="button"
+            onClick={onQuickSyncRumdinUps}
+            disabled={isSyncingSheets}
+            title="Kirim kedua beban UPS Rumdin ke Google Sheets (Lembar LAPORAN_CETAK_UPS)"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/30 transition-colors cursor-pointer self-start sm:self-auto"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSheets ? 'animate-spin' : ''}`} />
+            <span>Kirim UPS Rumdin ke Sheets</span>
+          </button>
+        )}
+      </div>
+
       {/* 4. UPS 40 KVA Rumdin (Dipo) */}
       <UPSFormCard
         id="rumdin-ups-40"
@@ -515,7 +615,7 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
 
       {/* Submit Button */}
       <div className="sticky bottom-4 z-10 bg-zinc-950/90 backdrop-blur-md p-3 sm:p-4 rounded-xl border border-zinc-800 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="text-xs text-zinc-400">
+        <div className="text-xs text-zinc-400 flex flex-wrap items-center gap-2">
           {!hasOfficers ? (
             <span className="text-amber-400 font-medium flex items-center gap-1">
               <AlertTriangle className="w-3.5 h-3.5" />
@@ -526,9 +626,30 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
               Petugas: {data.officers[0].toUpperCase()} & {data.officers[1].toUpperCase()} siap disubmit.
             </span>
           )}
+
+          {activeSpreadsheet && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30">
+              <FileSpreadsheet className="w-3 h-3" />
+              <span>{autoSyncEnabled ? 'Auto-Sync Sheets Aktif' : 'Tersambung ke Sheets'}</span>
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          {activeSpreadsheet && onQuickSyncAllRumdin && (
+            <button
+              type="button"
+              onClick={onQuickSyncAllRumdin}
+              disabled={isSyncingSheets || !hasOfficers}
+              title="Kirim ACO Dipo, ACO ST12 & UPS sekaligus ke Google Sheets"
+              className="px-3.5 py-2.5 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 transition-all cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSheets ? 'animate-spin' : ''}`} />
+              <span className="hidden md:inline">Sync Semua ke Sheets</span>
+              <span className="md:hidden">Sync Sheets</span>
+            </button>
+          )}
+
           <button
             type="submit"
             disabled={!hasOfficers}

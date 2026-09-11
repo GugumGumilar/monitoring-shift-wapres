@@ -1,6 +1,6 @@
 {
   "name": "Monitoring Shift Kerja",
-  "description": "Aplikasi monitoring shift kerja untuk inspeksi kelistrikan UPS dan ACO (Tim Wapres dan Tim Rumdin) dengan generator format WhatsApp dan integrasi Google Sheets real-time untuk pantauan ACO Wapres.",
+  "description": "Aplikasi monitoring shift kerja untuk inspeksi kelistrikan UPS dan ACO (Tim Wapres dan Tim Rumdin) dengan generator format WhatsApp dan integrasi Google Sheets real-time untuk pantauan ACO Wapres serta Pantauan UPS Dan ACO TR Rumdin Wapres (Dipo & ST12).",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

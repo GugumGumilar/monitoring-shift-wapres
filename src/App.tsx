@@ -34,6 +34,11 @@ import {
   getStoredSpreadsheet,
   saveStoredSpreadsheet,
   appendAcoWapresRecord,
+  appendAcoDipoRecord,
+  appendAcoST12Record,
+  appendRumdinUpsRecords,
+  appendWapresUpsRecords,
+  appendAllRumdinRecords,
 } from './services/googleSheets';
 import {
   CheckCircle2,
@@ -188,27 +193,162 @@ export default function App() {
   };
 
   const handleQuickSyncAco = async () => {
-    if (!accessToken) {
-      setIsSheetsModalOpen(true);
-      return;
-    }
-    if (!activeSpreadsheet) {
+    if (!accessToken || !activeSpreadsheet) {
       setIsSheetsModalOpen(true);
       return;
     }
 
     try {
       setIsSyncingSheets(true);
+      const targetSheet = activeSpreadsheet.sheetTabs?.acoTM || activeSpreadsheet.sheetName || 'ACO TM D 126';
       await appendAcoWapresRecord(
         accessToken,
         activeSpreadsheet.id,
-        activeSpreadsheet.sheetName,
+        targetSheet,
         wapresData
       );
       showToast('📊 Status ACO TM Gardu D 126 berhasil dikirim ke Google Sheets!');
     } catch (err: any) {
-      console.error('Quick sync error:', err);
+      console.error('Quick sync ACO TM error:', err);
       showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
+    } finally {
+      setIsSyncingSheets(false);
+    }
+  };
+
+  const handleQuickSyncDipo = async () => {
+    if (!accessToken || !activeSpreadsheet) {
+      setIsSheetsModalOpen(true);
+      return;
+    }
+    try {
+      setIsSyncingSheets(true);
+      const targetSheet = activeSpreadsheet.sheetTabs?.acoTRDipo || 'ACO TR DIPO';
+      await appendAcoDipoRecord(
+        accessToken,
+        activeSpreadsheet.id,
+        targetSheet,
+        rumdinData
+      );
+      showToast('📊 Status ACO TR DIPO berhasil dikirim ke Google Sheets!');
+    } catch (err: any) {
+      console.error('Quick sync Dipo error:', err);
+      showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
+    } finally {
+      setIsSyncingSheets(false);
+    }
+  };
+
+  const handleQuickSyncST12 = async () => {
+    if (!accessToken || !activeSpreadsheet) {
+      setIsSheetsModalOpen(true);
+      return;
+    }
+    try {
+      setIsSyncingSheets(true);
+      const targetSheet = activeSpreadsheet.sheetTabs?.acoTRST12 || 'ACO TR ST 12';
+      await appendAcoST12Record(
+        accessToken,
+        activeSpreadsheet.id,
+        targetSheet,
+        rumdinData
+      );
+      showToast('📊 Status ACO TR ST 12 berhasil dikirim ke Google Sheets!');
+    } catch (err: any) {
+      console.error('Quick sync ST12 error:', err);
+      showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
+    } finally {
+      setIsSyncingSheets(false);
+    }
+  };
+
+  const handleQuickSyncRumdinUps = async () => {
+    if (!accessToken || !activeSpreadsheet) {
+      setIsSheetsModalOpen(true);
+      return;
+    }
+    try {
+      setIsSyncingSheets(true);
+      const targetSheet = activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS';
+      await appendRumdinUpsRecords(
+        accessToken,
+        activeSpreadsheet.id,
+        targetSheet,
+        rumdinData
+      );
+      showToast('⚡ Beban UPS Rumdin (Dipo & ST12) berhasil dikirim ke Google Sheets!');
+    } catch (err: any) {
+      console.error('Quick sync UPS Rumdin error:', err);
+      showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
+    } finally {
+      setIsSyncingSheets(false);
+    }
+  };
+
+  const handleQuickSyncWapresUps = async () => {
+    if (!accessToken || !activeSpreadsheet) {
+      setIsSheetsModalOpen(true);
+      return;
+    }
+    try {
+      setIsSyncingSheets(true);
+      const targetSheet = activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS';
+      await appendWapresUpsRecords(
+        accessToken,
+        activeSpreadsheet.id,
+        targetSheet,
+        wapresData
+      );
+      showToast('⚡ Beban UPS Wapres (30, 40, 60 KVA) berhasil dikirim ke Google Sheets!');
+    } catch (err: any) {
+      console.error('Quick sync UPS Wapres error:', err);
+      showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
+    } finally {
+      setIsSyncingSheets(false);
+    }
+  };
+
+  const handleQuickSyncAllRumdin = async () => {
+    if (!accessToken || !activeSpreadsheet) {
+      setIsSheetsModalOpen(true);
+      return;
+    }
+    try {
+      setIsSyncingSheets(true);
+      await appendAllRumdinRecords(
+        accessToken,
+        activeSpreadsheet.id,
+        rumdinData,
+        activeSpreadsheet.sheetTabs
+      );
+      showToast('🚀 Semua data Tim Rumdin (Dipo, ST12, UPS) berhasil dikirim ke Google Sheets!');
+    } catch (err: any) {
+      console.error('Quick sync all Rumdin error:', err);
+      showToast(`Gagal kirim ke Google Sheets: ${err.message}`, 'info');
+    } finally {
+      setIsSyncingSheets(false);
+    }
+  };
+
+  const handleQuickSyncAll = async () => {
+    if (!accessToken || !activeSpreadsheet) {
+      setIsSheetsModalOpen(true);
+      return;
+    }
+    try {
+      setIsSyncingSheets(true);
+      // Sync Wapres ACO TM
+      const tmSheet = activeSpreadsheet.sheetTabs?.acoTM || activeSpreadsheet.sheetName || 'ACO TM D 126';
+      await appendAcoWapresRecord(accessToken, activeSpreadsheet.id, tmSheet, wapresData);
+      // Sync Wapres UPS
+      const upsSheet = activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS';
+      await appendWapresUpsRecords(accessToken, activeSpreadsheet.id, upsSheet, wapresData);
+      // Sync All Rumdin (Dipo, ST12, UPS)
+      await appendAllRumdinRecords(accessToken, activeSpreadsheet.id, rumdinData, activeSpreadsheet.sheetTabs);
+      showToast('✨ Seluruh data shift (Wapres & Rumdin) berhasil disinkronkan ke Google Sheets!');
+    } catch (err: any) {
+      console.error('Quick sync all error:', err);
+      showToast(`Gagal sync semua data: ${err.message}`, 'info');
     } finally {
       setIsSyncingSheets(false);
     }
@@ -224,13 +364,22 @@ export default function App() {
     if (accessToken && activeSpreadsheet && autoSyncEnabled) {
       try {
         setIsSyncingSheets(true);
+        const tmSheet = activeSpreadsheet.sheetTabs?.acoTM || activeSpreadsheet.sheetName || 'ACO TM D 126';
         await appendAcoWapresRecord(
           accessToken,
           activeSpreadsheet.id,
-          activeSpreadsheet.sheetName,
+          tmSheet,
           submittedData
         );
-        showToast('📊 Data ACO TM otomatis terinput ke baris Google Sheets!');
+        // Also sync Wapres UPS if filled
+        const upsSheet = activeSpreadsheet.sheetTabs?.ups || 'LAPORAN_CETAK_UPS';
+        await appendWapresUpsRecords(
+          accessToken,
+          activeSpreadsheet.id,
+          upsSheet,
+          submittedData
+        );
+        showToast('📊 Data ACO TM & UPS Wapres otomatis terinput ke Google Sheets!');
       } catch (err: any) {
         console.error('Auto sync to Google Sheets failed:', err);
         showToast(`⚠️ Laporan disimpan lokal. Sync Sheets gagal: ${err.message}`, 'info');
@@ -247,10 +396,29 @@ export default function App() {
     }
   };
 
-  const handleRumdinSubmit = (submittedData: TimRumdinReport) => {
+  const handleRumdinSubmit = async (submittedData: TimRumdinReport) => {
     const updatedReport = submitRumdinToShift(selectedDateKey, selectedShift, submittedData);
     setAllReports(getAllReports());
     showToast(`✅ Laporan Tim Rumdin berhasil disimpan pada ${submittedData.inspectionTime}!`);
+
+    // Real-time synchronization to Google Sheets
+    if (accessToken && activeSpreadsheet && autoSyncEnabled) {
+      try {
+        setIsSyncingSheets(true);
+        await appendAllRumdinRecords(
+          accessToken,
+          activeSpreadsheet.id,
+          submittedData,
+          activeSpreadsheet.sheetTabs
+        );
+        showToast('📊 Data ACO Dipo, ST12, & UPS Rumdin otomatis terinput ke Google Sheets!');
+      } catch (err: any) {
+        console.error('Auto sync Rumdin to Google Sheets failed:', err);
+        showToast(`⚠️ Laporan disimpan lokal. Sync Sheets gagal: ${err.message}`, 'info');
+      } finally {
+        setIsSyncingSheets(false);
+      }
+    }
 
     // If both complete, show preview modal
     if (updatedReport.wapres) {
@@ -428,6 +596,7 @@ export default function App() {
             autoSyncEnabled={autoSyncEnabled}
             onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
             onQuickSyncAcoToSheets={handleQuickSyncAco}
+            onQuickSyncWapresUps={handleQuickSyncWapresUps}
             isSyncingSheets={isSyncingSheets}
           />
         ) : (
@@ -437,6 +606,15 @@ export default function App() {
             onSubmit={handleRumdinSubmit}
             shiftName={selectedShift}
             isAlreadySubmitted={isRumdinSubmitted}
+            user={currentUser}
+            activeSpreadsheet={activeSpreadsheet}
+            autoSyncEnabled={autoSyncEnabled}
+            onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
+            onQuickSyncDipo={handleQuickSyncDipo}
+            onQuickSyncST12={handleQuickSyncST12}
+            onQuickSyncRumdinUps={handleQuickSyncRumdinUps}
+            onQuickSyncAllRumdin={handleQuickSyncAllRumdin}
+            isSyncingSheets={isSyncingSheets}
           />
         )}
       </main>
@@ -499,6 +677,11 @@ export default function App() {
         autoSyncEnabled={autoSyncEnabled}
         onToggleAutoSync={handleToggleAutoSync}
         onManualSyncCurrent={handleQuickSyncAco}
+        onManualSyncDipo={handleQuickSyncDipo}
+        onManualSyncST12={handleQuickSyncST12}
+        onManualSyncRumdinUps={handleQuickSyncRumdinUps}
+        onManualSyncWapresUps={handleQuickSyncWapresUps}
+        onManualSyncAll={handleQuickSyncAll}
       />
     </div>
   );

@@ -17,6 +17,7 @@ import {
   Clock,
   Calendar,
   FileSpreadsheet,
+  RefreshCw,
 } from 'lucide-react';
 
 interface TimWapresFormProps {
@@ -30,6 +31,7 @@ interface TimWapresFormProps {
   autoSyncEnabled?: boolean;
   onOpenGoogleSheets?: () => void;
   onQuickSyncAcoToSheets?: () => void;
+  onQuickSyncWapresUps?: () => void;
   isSyncingSheets?: boolean;
 }
 
@@ -44,6 +46,7 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
   autoSyncEnabled = true,
   onOpenGoogleSheets,
   onQuickSyncAcoToSheets,
+  onQuickSyncWapresUps,
   isSyncingSheets = false,
 }) => {
   const [liveTime, setLiveTime] = useState<string>(formatIndonesianTime());
@@ -516,6 +519,32 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
             className="w-full bg-zinc-950 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-xs text-zinc-100 focus:outline-none"
           />
         </div>
+      </div>
+
+      {/* UPS Wapres Header with Quick Sync */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2 border-t border-zinc-800">
+        <div>
+          <h3 className="font-bold text-zinc-100 text-sm flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>Pantauan Beban & Tegangan UPS Wapres (Gardu D 126)</span>
+          </h3>
+          <p className="text-xs text-zinc-400">
+            UPS 30 KVA (Lt. 1), UPS 40 KVA (Lt. 2), dan UPS 60 KVA (Lt. 3)
+          </p>
+        </div>
+
+        {activeSpreadsheet && onQuickSyncWapresUps && (
+          <button
+            type="button"
+            onClick={onQuickSyncWapresUps}
+            disabled={isSyncingSheets}
+            title="Kirim 3 beban UPS Wapres ke Google Sheets (Lembar LAPORAN_CETAK_UPS)"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/30 transition-colors cursor-pointer self-start sm:self-auto"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSheets ? 'animate-spin' : ''}`} />
+            <span>Kirim UPS Wapres ke Sheets</span>
+          </button>
+        )}
       </div>
 
       {/* 3. UPS 30 KVA */}
