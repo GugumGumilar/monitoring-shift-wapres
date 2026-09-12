@@ -125,3 +125,6 @@ export interface CombinedShiftReport {
   createdAt: string;
   updatedAt: string;
 }
+
+export type ShiftReportRecord = CombinedShiftReport;
+

@@ -24,6 +24,7 @@ import {
   Send,
   LockOpen,
   KeyRound,
+  RotateCcw,
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import {
@@ -34,6 +35,7 @@ import {
 } from '../services/googleSheets';
 import {
   GOOGLE_APPS_SCRIPT_CODE,
+  DEFAULT_WEBHOOK_URL,
   testWebhookConnection,
   tidySheetsViaWebhook,
 } from '../services/webhookSync';
@@ -157,7 +159,13 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
     onUpdateSheetLink(null);
     setWebhookInput('');
     setSheetLinkInput('');
-    setSuccessMessage('Koneksi langsung Webhook telah diputuskan.');
+    setSuccessMessage('Koneksi kustom dinonaktifkan.');
+  };
+
+  const handleRestoreDefault = () => {
+    onUpdateWebhookUrl(DEFAULT_WEBHOOK_URL);
+    setWebhookInput(DEFAULT_WEBHOOK_URL);
+    setSuccessMessage('✅ URL Webhook sistem resmi telah diaktifkan kembali!');
   };
 
   const handleCopyCode = async () => {
@@ -375,14 +383,30 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
               {/* Connection Status Banner */}
               {isDirectConnected ? (
                 <div className="bg-emerald-950/30 border border-emerald-500/40 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
-                      <span className="font-bold text-xs sm:text-sm text-emerald-300">
-                        Terhubung Langsung ke Google Sheet (Bebas Login Petugas)
-                      </span>
+                      <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse shrink-0"></div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-bold text-xs sm:text-sm text-emerald-300">
+                            Database Google Sheets: Aktif
+                          </span>
+                          {directWebhookUrl === DEFAULT_WEBHOOK_URL ? (
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
+                              Tertanam di Sistem
+                            </span>
+                          ) : (
+                            <span className="text-[10px] bg-blue-500/20 text-blue-300 font-bold px-2 py-0.5 rounded-full border border-blue-500/30">
+                              URL Kustom
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-zinc-400">
+                          Bebas login akun, seluruh data otomatis masuk ke spreadsheet.
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 self-end sm:self-center">
                       <button
                         type="button"
                         onClick={handleTestWebhook}
@@ -397,18 +421,30 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
                         <span>Tes Sinyal</span>
                       </button>
 
+                      {directWebhookUrl !== DEFAULT_WEBHOOK_URL && (
+                        <button
+                          type="button"
+                          onClick={handleRestoreDefault}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition-colors cursor-pointer"
+                          title="Kembalikan ke URL Webhook bawaan sistem"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Reset Bawaan</span>
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={handleDisconnectDirect}
                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition-colors cursor-pointer"
                       >
-                        Putuskan
+                        Ubah URL
                       </button>
                     </div>
                   </div>
 
-                  <div className="text-[11px] text-zinc-300 font-mono break-all bg-zinc-950/80 p-2 rounded-lg border border-zinc-800">
-                    <span className="text-zinc-500 block mb-0.5">URL Webhook Aktif:</span>
+                  <div className="text-[11px] text-zinc-300 font-mono break-all bg-zinc-950/80 p-2.5 rounded-lg border border-zinc-800">
+                    <span className="text-zinc-500 block mb-0.5">URL Webhook Aktif (Bebas Login Petugas):</span>
                     {directWebhookUrl}
                   </div>
 
@@ -491,7 +527,16 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-end pt-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleRestoreDefault}
+                      className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer border border-zinc-700"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Gunakan URL Bawaan Sistem</span>
+                    </button>
+
                     <button
                       type="submit"
                       disabled={loadingAction === 'test_webhook' || !webhookInput.trim()}
