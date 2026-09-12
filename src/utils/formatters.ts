@@ -84,9 +84,38 @@ export function createEmptyUPS(overrides: Partial<UPSData> = {}): UPSData {
     alarm: 'NORMAL',
     backupHours: '',
     backupMinutes: '',
+    backupTotalMinutes: '',
     keterangan: '-',
     ...overrides,
   };
+}
+
+function formatHoursDisplay(val?: string, totalMinutes?: string): string {
+  if (val !== undefined && val.trim() !== '' && val !== '-') {
+    const clean = val.replace(/jam/gi, '').trim();
+    return `${clean} Jam`;
+  }
+  if (totalMinutes !== undefined && totalMinutes.trim() !== '') {
+    const total = parseInt(totalMinutes, 10);
+    if (!isNaN(total)) {
+      return `${Math.floor(total / 60)} Jam`;
+    }
+  }
+  return '0 Jam';
+}
+
+function formatMinutesDisplay(val?: string, totalMinutes?: string): string {
+  if (val !== undefined && val.trim() !== '' && val !== '-') {
+    const clean = val.replace(/menit/gi, '').trim();
+    return `${clean} Menit`;
+  }
+  if (totalMinutes !== undefined && totalMinutes.trim() !== '') {
+    const total = parseInt(totalMinutes, 10);
+    if (!isNaN(total)) {
+      return `${total % 60} Menit`;
+    }
+  }
+  return '0 Menit';
 }
 
 export function createDefaultWapresData(): TimWapresReport {
@@ -191,8 +220,8 @@ export function generateWhatsAppReport(report: CombinedShiftReport): string {
     parts.push('Alarm UPS :');
     parts.push(w.ups30.alarm || 'NORMAL');
     parts.push('Back Up Time UPS :');
-    parts.push(`Hours : ${w.ups30.backupHours || '0'} Jam`);
-    parts.push(`Minutes: ${w.ups30.backupMinutes || '0'} Menit`);
+    parts.push(`Hours : ${formatHoursDisplay(w.ups30.backupHours, w.ups30.backupTotalMinutes)}`);
+    parts.push(`Minutes: ${formatMinutesDisplay(w.ups30.backupMinutes, w.ups30.backupTotalMinutes)}`);
     parts.push('Keterangan :');
     parts.push(w.ups30.keterangan || '-');
 
@@ -216,8 +245,8 @@ export function generateWhatsAppReport(report: CombinedShiftReport): string {
     parts.push('Alarm UPS :');
     parts.push(w.ups40.alarm || 'NORMAL');
     parts.push('Back Up Time UPS :');
-    parts.push(`Hours : ${w.ups40.backupHours || '0'} Jam`);
-    parts.push(`Minutes: ${w.ups40.backupMinutes || '0'} Menit`);
+    parts.push(`Hours : ${formatHoursDisplay(w.ups40.backupHours, w.ups40.backupTotalMinutes)}`);
+    parts.push(`Minutes: ${formatMinutesDisplay(w.ups40.backupMinutes, w.ups40.backupTotalMinutes)}`);
     parts.push('Keterangan :');
     parts.push(w.ups40.keterangan || '-');
 
@@ -241,8 +270,8 @@ export function generateWhatsAppReport(report: CombinedShiftReport): string {
     parts.push('Alarm UPS :');
     parts.push(w.ups60.alarm || 'NORMAL');
     parts.push('Back Up Time UPS :');
-    parts.push(`Hours : ${w.ups60.backupHours || '0'} Jam`);
-    parts.push(`Minutes: ${w.ups60.backupMinutes || '0'} Menit`);
+    parts.push(`Hours : ${formatHoursDisplay(w.ups60.backupHours, w.ups60.backupTotalMinutes)}`);
+    parts.push(`Minutes: ${formatMinutesDisplay(w.ups60.backupMinutes, w.ups60.backupTotalMinutes)}`);
     parts.push('Keterangan :');
     parts.push(w.ups60.keterangan || '-');
 
@@ -358,8 +387,8 @@ export function generateWhatsAppReport(report: CombinedShiftReport): string {
     parts.push('Alarm UPS :');
     parts.push(r.ups40Dipo.alarm || 'NORMAL');
     parts.push('Back Up Time UPS :');
-    parts.push(`Hours : ${r.ups40Dipo.backupHours || '0'} Jam`);
-    parts.push(`Minutes: ${r.ups40Dipo.backupMinutes || '0'} Menit`);
+    parts.push(`Hours : ${formatHoursDisplay(r.ups40Dipo.backupHours, r.ups40Dipo.backupTotalMinutes)}`);
+    parts.push(`Minutes: ${formatMinutesDisplay(r.ups40Dipo.backupMinutes, r.ups40Dipo.backupTotalMinutes)}`);
     parts.push('Keterangan :');
     parts.push(r.ups40Dipo.keterangan || '-');
 
@@ -382,8 +411,8 @@ export function generateWhatsAppReport(report: CombinedShiftReport): string {
     parts.push('Alarm UPS :');
     parts.push(r.ups100ST12.alarm || 'NORMAL');
     parts.push('Back Up Time UPS :');
-    parts.push(`Hours : ${r.ups100ST12.backupHours || '0'} Jam`);
-    parts.push(`Minutes: ${r.ups100ST12.backupMinutes || '0'} Menit`);
+    parts.push(`Hours : ${formatHoursDisplay(r.ups100ST12.backupHours, r.ups100ST12.backupTotalMinutes)}`);
+    parts.push(`Minutes: ${formatMinutesDisplay(r.ups100ST12.backupMinutes, r.ups100ST12.backupTotalMinutes)}`);
     parts.push('Keterangan :');
     parts.push(r.ups100ST12.keterangan || '-');
   }

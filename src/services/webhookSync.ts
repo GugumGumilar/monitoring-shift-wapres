@@ -102,6 +102,17 @@ export function buildUpsRowData(
   keteranganSuffix?: string
 ): string[] {
   const ket = [ups.keterangan, keteranganSuffix].filter(Boolean).join(' - ') || '-';
+
+  let hoursVal = ups.backupHours;
+  let minutesVal = ups.backupMinutes;
+  if ((!hoursVal && !minutesVal) && ups.backupTotalMinutes !== undefined && ups.backupTotalMinutes !== '') {
+    const total = parseInt(ups.backupTotalMinutes, 10);
+    if (!isNaN(total)) {
+      hoursVal = String(Math.floor(total / 60));
+      minutesVal = String(total % 60);
+    }
+  }
+
   return [
     '', // NO will be calculated by script
     officersStr,
@@ -118,8 +129,8 @@ export function buildUpsRowData(
     formatVolt(ups.voltST),
     formatTemp(ups.temperature),
     (ups.alarm || 'NORMAL').toUpperCase(),
-    formatHours(ups.backupHours),
-    formatMinutes(ups.backupMinutes),
+    formatHours(hoursVal),
+    formatMinutes(minutesVal),
     ket,
   ];
 }

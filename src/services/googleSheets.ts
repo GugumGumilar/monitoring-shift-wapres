@@ -1392,6 +1392,17 @@ export function buildUpsRow(
 ): string[] {
   const ket = [ups.keterangan, keteranganSuffix].filter(Boolean).join(' - ') || '-';
 
+  // Nilai Jam dan Menit untuk spreadsheet
+  let hoursVal = ups.backupHours;
+  let minutesVal = ups.backupMinutes;
+  if ((!hoursVal && !minutesVal) && ups.backupTotalMinutes !== undefined && ups.backupTotalMinutes !== '') {
+    const total = parseInt(ups.backupTotalMinutes, 10);
+    if (!isNaN(total)) {
+      hoursVal = String(Math.floor(total / 60));
+      minutesVal = String(total % 60);
+    }
+  }
+
   return [
     noValue,
     officersStr,
@@ -1408,8 +1419,8 @@ export function buildUpsRow(
     formatVolt(ups.voltST), // Col M: (S-T)
     formatTemp(ups.temperature),
     (ups.alarm || 'NORMAL').toUpperCase(),
-    formatHours(ups.backupHours),
-    formatMinutes(ups.backupMinutes),
+    formatHours(hoursVal),
+    formatMinutes(minutesVal),
     ket,
   ];
 }

@@ -59,6 +59,7 @@ export interface UPSData {
   alarm: 'NORMAL' | 'ALARM';
   backupHours: string;
   backupMinutes: string;
+  backupTotalMinutes?: string;
   keterangan: string;
 }
 

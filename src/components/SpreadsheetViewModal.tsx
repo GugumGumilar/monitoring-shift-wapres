@@ -640,8 +640,20 @@ export const SpreadsheetViewModal: React.FC<SpreadsheetViewModalProps> = ({
                             <td className="border border-black px-1 py-0.5 align-middle">{upsObj?.alarmStatus || '-'}</td>
 
                             {/* Col P-Q: Backup Time */}
-                            <td className="border border-black px-1 py-0.5 align-middle">{upsObj?.backupHours || '-'}</td>
-                            <td className="border border-black px-1 py-0.5 align-middle">{upsObj?.backupMinutes || '-'}</td>
+                            <td className="border border-black px-1 py-0.5 align-middle">
+                              {upsObj?.backupHours
+                                ? (String(upsObj.backupHours).toLowerCase().includes('jam') ? upsObj.backupHours : `${upsObj.backupHours} Jam`)
+                                : (upsObj?.backupTotalMinutes !== undefined && upsObj?.backupTotalMinutes !== ''
+                                    ? `${Math.floor(parseInt(upsObj.backupTotalMinutes, 10) / 60)} Jam`
+                                    : '-')}
+                            </td>
+                            <td className="border border-black px-1 py-0.5 align-middle">
+                              {upsObj?.backupMinutes
+                                ? (String(upsObj.backupMinutes).toLowerCase().includes('menit') ? upsObj.backupMinutes : `${upsObj.backupMinutes} Menit`)
+                                : (upsObj?.backupTotalMinutes !== undefined && upsObj?.backupTotalMinutes !== ''
+                                    ? `${parseInt(upsObj.backupTotalMinutes, 10) % 60} Menit`
+                                    : '-')}
+                            </td>
 
                             {/* Col R: Keterangan */}
                             <td className="border border-black px-1.5 py-0.5 text-[10px] align-middle">

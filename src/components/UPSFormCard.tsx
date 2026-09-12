@@ -43,6 +43,7 @@ export const UPSFormCard: React.FC<UPSFormCardProps> = ({
       alarm: 'NORMAL',
       backupHours: '',
       backupMinutes: '',
+      backupTotalMinutes: '',
     });
   };
 
@@ -59,6 +60,60 @@ export const UPSFormCard: React.FC<UPSFormCardProps> = ({
       alarm: 'NORMAL',
     });
   };
+
+  // Menghitung nilai menit yang ditampilkan pada input
+  const getCurrentMinutes = (): string => {
+    if (data.backupTotalMinutes !== undefined && data.backupTotalMinutes !== '') {
+      return data.backupTotalMinutes;
+    }
+    const h = data.backupHours ? parseInt(data.backupHours, 10) : NaN;
+    const m = data.backupMinutes ? parseInt(data.backupMinutes, 10) : NaN;
+    if (!isNaN(h) || !isNaN(m)) {
+      const total = (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+      return String(total);
+    }
+    return '';
+  };
+
+  const currentMinutes = getCurrentMinutes();
+
+  const handleMinutesChange = (val: string) => {
+    // Hanya menerima karakter angka
+    const cleanDigits = val.replace(/[^0-9]/g, '');
+    if (cleanDigits === '') {
+      onChange({
+        ...data,
+        backupTotalMinutes: '',
+        backupHours: '',
+        backupMinutes: '',
+      });
+      return;
+    }
+
+    const totalMinutes = parseInt(cleanDigits, 10);
+    if (isNaN(totalMinutes)) {
+      onChange({
+        ...data,
+        backupTotalMinutes: '',
+        backupHours: '',
+        backupMinutes: '',
+      });
+      return;
+    }
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    onChange({
+      ...data,
+      backupTotalMinutes: cleanDigits,
+      backupHours: String(hours),
+      backupMinutes: String(minutes),
+    });
+  };
+
+  const displayHours = data.backupHours !== '' ? data.backupHours : (currentMinutes !== '' ? String(Math.floor(parseInt(currentMinutes, 10) / 60)) : '0');
+  const displayMinutes = data.backupMinutes !== '' ? data.backupMinutes : (currentMinutes !== '' ? String(parseInt(currentMinutes, 10) % 60) : '0');
 
   return (
     <div id={`ups-card-${id}`} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 md:p-5 space-y-4 shadow-sm hover:border-zinc-700/80 transition-all">
@@ -309,37 +364,34 @@ export const UPSFormCard: React.FC<UPSFormCardProps> = ({
           </div>
         </div>
 
-        {/* Backup Time */}
+        {/* Backup Time (Hanya Menginput Menit) */}
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-indigo-400" />
-            Back Up Time
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="relative">
-              <input
-                id={`${id}-backup-hours`}
-                type="text"
-                inputMode="numeric"
-                placeholder="0"
-                value={data.backupHours}
-                onChange={(e) => updateField('backupHours', e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-2 text-sm text-zinc-100 font-mono font-semibold focus:outline-none focus:border-indigo-500 pr-9"
-              />
-              <span className="absolute right-2 top-2.5 text-[10px] text-zinc-400">Jam</span>
-            </div>
-            <div className="relative">
-              <input
-                id={`${id}-backup-mins`}
-                type="text"
-                inputMode="numeric"
-                placeholder="0"
-                value={data.backupMinutes}
-                onChange={(e) => updateField('backupMinutes', e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-2 text-sm text-zinc-100 font-mono font-semibold focus:outline-none focus:border-indigo-500 pr-9"
-              />
-              <span className="absolute right-2 top-2.5 text-[10px] text-zinc-400">Mnt</span>
-            </div>
+          <div className="flex items-center justify-between">
+            <label htmlFor={`${id}-backup-mins`} className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Back Up Time</span>
+            </label>
+            <span className="text-[10px] font-bold text-indigo-300 bg-indigo-500/20 px-1.5 py-0.5 rounded border border-indigo-500/30">
+              Input Menit
+            </span>
+          </div>
+          <div className="relative">
+            <input
+              id={`${id}-backup-mins`}
+              type="text"
+              inputMode="numeric"
+              placeholder="Contoh: 120"
+              value={currentMinutes}
+              onChange={(e) => handleMinutesChange(e.target.value)}
+              className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 font-mono font-semibold focus:outline-none focus:border-indigo-500 pr-16"
+            />
+            <span className="absolute right-3 top-2.5 text-xs text-zinc-400 font-medium select-none">Menit</span>
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-zinc-400 px-0.5 pt-0.5">
+            <span className="text-[10px] text-zinc-500">Konversi:</span>
+            <span className="font-semibold text-indigo-300 font-mono">
+              {displayHours} Jam {displayMinutes} Menit
+            </span>
           </div>
         </div>
       </div>
@@ -355,16 +407,22 @@ export const UPSFormCard: React.FC<UPSFormCardProps> = ({
             <button
               type="button"
               onClick={() => updateField('keterangan', '-')}
-              className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+              className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 cursor-pointer"
             >
               Preset: -
             </button>
             <button
               type="button"
-              onClick={() =>
-                updateField('keterangan', 'Backup time ups tidak terbaca (harus di padamkan terlebih dahulu)')
-              }
-              className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 truncate max-w-[140px] sm:max-w-none"
+              onClick={() => {
+                onChange({
+                  ...data,
+                  keterangan: 'Backup time ups tidak terbaca (harus di padamkan terlebih dahulu)',
+                  backupTotalMinutes: '0',
+                  backupHours: '0',
+                  backupMinutes: '0',
+                });
+              }}
+              className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 truncate max-w-[140px] sm:max-w-none cursor-pointer"
             >
               Preset: Tidak Terbaca
             </button>
