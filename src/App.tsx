@@ -877,16 +877,10 @@ export default function App() {
       <GoogleSheetsModal
         isOpen={isSheetsModalOpen}
         onClose={() => setIsSheetsModalOpen(false)}
-        user={currentUser}
-        accessToken={accessToken}
-        activeSpreadsheet={activeSpreadsheet}
         directWebhookUrl={directWebhookUrl}
         onUpdateWebhookUrl={handleUpdateWebhookUrl}
         directSheetLink={directSheetLink}
         onUpdateSheetLink={handleUpdateSheetLink}
-        onSignIn={handleGoogleSignIn}
-        onSignOut={handleGoogleSignOut}
-        onSpreadsheetUpdated={handleSpreadsheetUpdated}
         autoSyncEnabled={autoSyncEnabled}
         onToggleAutoSync={handleToggleAutoSync}
         onManualSyncCurrent={handleQuickSyncAco}

@@ -8,12 +8,17 @@ export const STORAGE_KEY_SHEET_LINK = 'monitoring_shift_sheet_link';
  * URL Webhook Google Apps Script resmi yang tertanam langsung di sistem
  */
 export const DEFAULT_WEBHOOK_URL =
-  'https://script.google.com/macros/s/AKfycbxZk9f0wiY-t8WyHjwunQBrCTPalbf4HU-nzKWmJgWVtiVKaD50QV8YYfwpe87RZw45Eg/exec';
+  'https://script.google.com/macros/s/AKfycbzRvLt9G6ryW53gWu-VNzVsaU_3JOYM3VZ7jWsiELHTQJCS7itls6R-p1Ot8eHSIbys0g/exec';
 
 export function getStoredWebhookUrl(): string {
   try {
     const stored = localStorage.getItem(STORAGE_KEY_WEBHOOK);
     if (stored && stored.trim() !== '') {
+      // Jika masih tersimpan URL versi lama, perbarui otomatis ke URL resmi baru
+      if (stored.includes('AKfycbxZk9f0wiY-t8WyHjwunQBrCTPalbf4HU')) {
+        localStorage.setItem(STORAGE_KEY_WEBHOOK, DEFAULT_WEBHOOK_URL);
+        return DEFAULT_WEBHOOK_URL;
+      }
       return stored.trim();
     }
   } catch (err) {
@@ -544,6 +549,46 @@ export async function clearShiftViaWebhook(
 export async function tidySheetsViaWebhook(webhookUrl: string): Promise<{ success: boolean; message: string }> {
   return sendToWebhook(webhookUrl, {
     action: 'TIDY_SHEETS',
+  });
+}
+
+export async function triggerArchiveMonthlyViaWebhook(
+  webhookUrl: string
+): Promise<{ success: boolean; message: string; archiveUrl?: string }> {
+  return sendToWebhook(webhookUrl, {
+    action: 'BUAT_ARSIP',
+  });
+}
+
+export async function triggerResetMonthlyViaWebhook(
+  webhookUrl: string
+): Promise<{ success: boolean; message: string; archiveUrl?: string }> {
+  return sendToWebhook(webhookUrl, {
+    action: 'RESET_BULANAN',
+  });
+}
+
+export async function triggerSetupTriggerViaWebhook(
+  webhookUrl: string
+): Promise<{ success: boolean; message: string }> {
+  return sendToWebhook(webhookUrl, {
+    action: 'PASANG_TRIGGER',
+  });
+}
+
+export async function triggerSetupArchiveTriggerViaWebhook(
+  webhookUrl: string
+): Promise<{ success: boolean; message: string }> {
+  return sendToWebhook(webhookUrl, {
+    action: 'PASANG_TRIGGER_ARSIP',
+  });
+}
+
+export async function triggerSetupAllTriggersViaWebhook(
+  webhookUrl: string
+): Promise<{ success: boolean; message: string }> {
+  return sendToWebhook(webhookUrl, {
+    action: 'PASANG_SEMUA_TRIGGER',
   });
 }
 

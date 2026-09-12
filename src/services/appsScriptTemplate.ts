@@ -46,6 +46,13 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("⚡ PLN Shift")
     .addItem("✨ Rapikan Semua Tampilan Sheet (Standar Resmi)", "rapikanSemuaSheet")
+    .addSeparator()
+    .addItem("🚀 Aktifkan Semua Otomasi (Arsip Jam 06:00 & Reset Jam 07:00)", "buatSemuaTriggerOtomatis")
+    .addItem("⏰ Pasang Trigger Arsip Otomatis (Tgl 1 Jam 06:00)", "buatTriggerArsipBulanan")
+    .addItem("⏰ Pasang Trigger Reset Otomatis (Tgl 1 Jam 07:00)", "buatTriggerResetLaporan")
+    .addSeparator()
+    .addItem("📁 Buat Arsip Bulanan Sekarang (Manual)", "buatArsipBulananManual")
+    .addItem("🔄 Reset Laporan Bulanan (Manual)", "resetLaporanBulananOtomatis")
     .addToUi();
 }
 
@@ -69,6 +76,40 @@ function doPost(e) {
     if (data.action === "TIDY_SHEETS" || data.action === "FORMAT_ALL") {
       rapikanSemuaSheet(ss);
       return responseSuccess("Seluruh lembar Google Sheets berhasil dirapikan dengan format resmi!");
+    }
+
+    // Aksi Arsip & Reset Bulanan
+    if (data.action === "BUAT_ARSIP" || data.action === "ARCHIVE_MONTHLY") {
+      var urlArsip = buatArsipBulanan();
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: "Arsip bulanan berhasil dibuat dan tersimpan di Google Drive!",
+        archiveUrl: urlArsip
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (data.action === "RESET_BULANAN" || data.action === "RESET_MONTHLY") {
+      var urlArsipReset = resetLaporanBulananOtomatis();
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: "Laporan bulanan berhasil direset & data bulan lalu telah diarsipkan!",
+        archiveUrl: urlArsipReset
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (data.action === "PASANG_TRIGGER_ARSIP" || data.action === "SETUP_ARCHIVE_TRIGGER") {
+      buatTriggerArsipBulanan();
+      return responseSuccess("Trigger arsip otomatis bulanan (Tanggal 1 Jam 06:00) berhasil dipasang!");
+    }
+
+    if (data.action === "PASANG_TRIGGER" || data.action === "SETUP_TRIGGER") {
+      buatTriggerResetLaporan();
+      return responseSuccess("Trigger otomatis tanggal 1 jam 07:00 berhasil dipasang!");
+    }
+
+    if (data.action === "PASANG_SEMUA_TRIGGER" || data.action === "SETUP_ALL_TRIGGERS") {
+      buatSemuaTriggerOtomatis();
+      return responseSuccess("Seluruh otomasi bulanan (Arsip Jam 06:00 & Reset Jam 07:00) berhasil dipasang!");
     }
 
     // 1. ACO TM GARDU D 126 (Wapres)
@@ -753,5 +794,227 @@ function clearShiftRow(ss, target, inspectionDate, shift, dayOfMonth) {
       lapUps.getRange(ur, 1, 1, 18).setValues([emptyUps]);
     }
   }
+}
+
+// ========================================================================
+// ARSIP BULANAN & RESET OTOMATIS
+// ========================================================================
+
+/**
+ * Mendapatkan atau membuat folder khusus arsip di Google Drive
+ */
+function dapatkanFolderArsip() {
+  try {
+    var namaFolder = "ARSIP_REKAP_MONITORING_UPS";
+    var folders = DriveApp.getFoldersByName(namaFolder);
+    if (folders.hasNext()) {
+      return folders.next();
+    }
+    return DriveApp.createFolder(namaFolder);
+  } catch (e) {
+    Logger.log("Peringatan akses Google Drive: " + e);
+    return null;
+  }
+}
+
+/**
+ * Membuat spreadsheet arsip baru di Google Drive berisi data bulan lalu.
+ * Lembar LAPORAN_CETAK dan LAPORAN_CETAK_UPS disalin sebagai nilai statis.
+ */
+function buatArsipBulanan() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sekarang = new Date();
+  var bulanLalu = new Date(sekarang.getFullYear(), sekarang.getMonth() - 1, 1);
+  var namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  var labelWaktu = namaBulan[bulanLalu.getMonth()] + " " + bulanLalu.getFullYear();
+  var namaFileArsip = "REKAP_MONITORING_UPS_" + labelWaktu;
+
+  // Cek apakah file arsip bulan tersebut sudah pernah dibuat sebelumnya agar tidak duplikat
+  try {
+    var existingFiles = DriveApp.getFilesByName(namaFileArsip);
+    if (existingFiles.hasNext()) {
+      var existing = existingFiles.next();
+      Logger.log("File arsip sudah ada: " + existing.getUrl());
+      return existing.getUrl();
+    }
+  } catch (e) {}
+
+  var fileArsip = SpreadsheetApp.create(namaFileArsip);
+
+  ["LAPORAN_CETAK", "LAPORAN_CETAK_UPS"].forEach(function(sName) {
+    var sheetAsli = ss.getSheetByName(sName);
+    if (sheetAsli) {
+      var copySheet = sheetAsli.copyTo(fileArsip);
+      copySheet.setName(sName);
+      var range = copySheet.getDataRange();
+      range.setValues(range.getValues());
+    }
+  });
+
+  // Pindahkan file ke folder khusus "ARSIP_REKAP_MONITORING_UPS" jika tersedia
+  try {
+    var targetFolder = dapatkanFolderArsip();
+    if (targetFolder) {
+      var fileInDrive = DriveApp.getFileById(fileArsip.getId());
+      fileInDrive.moveTo(targetFolder);
+    }
+  } catch (e) {
+    Logger.log("Info folder: " + e);
+  }
+
+  // Hapus lembar bawaan Sheet1 jika ada
+  try {
+    var defaultSheet = fileArsip.getSheetByName("Sheet1") || fileArsip.getSheetByName("Sheet 1");
+    if (defaultSheet && fileArsip.getSheets().length > 1) {
+      fileArsip.deleteSheet(defaultSheet);
+    }
+  } catch (e) {}
+
+  return fileArsip.getUrl();
+}
+
+function buatArsipBulananManual() {
+  var url = buatArsipBulanan();
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast("Arsip bulanan berhasil disimpan di Google Drive: " + url, "📁 Arsip Sukses", 10);
+  } catch (e) {}
+  return url;
+}
+
+/**
+ * Mengarsipkan bulan lalu lalu mengosongkan tabel input untuk bulan baru
+ */
+function resetLaporanBulananOtomatis() {
+  var urlArsip = "";
+  try {
+    urlArsip = buatArsipBulanan(); 
+  } catch (errArsip) {
+    Logger.log("Peringatan pembuatan arsip: " + errArsip);
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sekarang = new Date();
+  var tahun = sekarang.getFullYear();
+  var bulan = sekarang.getMonth();
+  var namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  var labelBulanBaru = namaBulan[bulan] + " " + tahun;
+  
+  var cetakACO = ss.getSheetByName("LAPORAN_CETAK");
+  if (cetakACO) {
+    ["B6:B98", "D6:Q98", "B105:B197", "D105:Q197", "B204:B296", "D204:Q296"].forEach(function(r) {
+      try { cetakACO.getRange(r).clearContent(); } catch (e) {}
+    });
+    isiTanggalKolomC(cetakACO, [6, 105, 204], tahun, bulan);
+
+    try {
+      [3, 102, 201].forEach(function(r) {
+        cetakACO.getRange(r, 2).setValue("Bulan : " + labelBulanBaru);
+      });
+    } catch (e) {}
+  }
+
+  var cetakUPS = ss.getSheetByName("LAPORAN_CETAK_UPS");
+  if (cetakUPS) {
+    ["B7:B99", "D7:R99", "B107:B199", "D107:R199", "B207:B299", "D207:R299", "B307:B399", "D307:R399", "B407:B499", "D407:R499"].forEach(function(r) {
+      try { cetakUPS.getRange(r).clearContent(); } catch (e) {}
+    });
+    isiTanggalKolomC(cetakUPS, [7, 107, 207, 307, 407], tahun, bulan);
+
+    try {
+      [3, 103, 203, 303, 403].forEach(function(r) {
+        cetakUPS.getRange(r, 2).setValue("Bulan : " + labelBulanBaru);
+      });
+    } catch (e) {}
+  }
+
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast("Laporan bulan baru siap! Arsip tersimpan di: " + urlArsip, "🔄 Reset Sukses", 10);
+  } catch (e) {}
+
+  return urlArsip;
+}
+
+/**
+ * Mengisi ulang Kolom C (Tanggal DD/MM/YYYY) dan Kolom A (No) secara rapi untuk 31 hari
+ */
+function isiTanggalKolomC(sheet, startRows, tahun, bulan) {
+  if (!sheet) return;
+  var monthNum = ("0" + (bulan + 1)).slice(-2);
+  var yearNum = tahun;
+
+  for (var s = 0; s < startRows.length; s++) {
+    var startRow = startRows[s];
+    for (var d = 1; d <= 31; d++) {
+      var dRow = startRow + (d - 1) * 3;
+      var dayStr = ("0" + d).slice(-2) + "/" + monthNum + "/" + yearNum;
+
+      try {
+        var noRange = sheet.getRange(dRow, 1, 3, 1);
+        noRange.merge();
+        sheet.getRange(dRow, 1).setValue(d);
+      } catch (e) {}
+
+      try {
+        var dateRange = sheet.getRange(dRow, 3, 3, 1);
+        dateRange.merge();
+        sheet.getRange(dRow, 3).setValue(dayStr);
+      } catch (e) {}
+    }
+  }
+}
+
+/**
+ * Memasang Trigger Arsip Otomatis: Dijalankan setiap tanggal 1 jam 06:00 pagi
+ */
+function buatTriggerArsipBulanan() {
+  var allTriggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < allTriggers.length; i++) {
+    if (allTriggers[i].getHandlerFunction() === "buatArsipBulanan") {
+      ScriptApp.deleteTrigger(allTriggers[i]);
+    }
+  }
+  ScriptApp.newTrigger("buatArsipBulanan")
+    .timeBased()
+    .onMonthDay(1)
+    .atHour(6)
+    .create();
+
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast("Trigger arsip otomatis bulanan (Tanggal 1 Jam 06:00) berhasil dipasang!", "⏰ Trigger Arsip Aktif", 8);
+  } catch (e) {}
+}
+
+/**
+ * Memasang Trigger Reset Otomatis: Dijalankan setiap tanggal 1 jam 07:00 pagi
+ */
+function buatTriggerResetLaporan() {
+  var allTriggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < allTriggers.length; i++) {
+    if (allTriggers[i].getHandlerFunction() === "resetLaporanBulananOtomatis") {
+      ScriptApp.deleteTrigger(allTriggers[i]);
+    }
+  }
+  ScriptApp.newTrigger("resetLaporanBulananOtomatis")
+    .timeBased()
+    .onMonthDay(1)
+    .atHour(7)
+    .create();
+
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast("Trigger reset otomatis tanggal 1 jam 07:00 berhasil dipasang!", "⏰ Trigger Reset Aktif", 8);
+  } catch (e) {}
+}
+
+/**
+ * Memasang Seluruh Otomasi Sekaligus:
+ * 1. Arsip Otomatis (Tanggal 1 Jam 06:00)
+ * 2. Reset Otomatis (Tanggal 1 Jam 07:00)
+ */
+function buatSemuaTriggerOtomatis() {
+  buatTriggerArsipBulanan();
+  buatTriggerResetLaporan();
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast("Semua otomasi bulanan aktif! Arsip (Tgl 1 Jam 06:00) & Reset (Tgl 1 Jam 07:00)", "🚀 Otomasi Penuh Aktif", 10);
+  } catch (e) {}
 }
 `;
