@@ -49,6 +49,19 @@ export function getCurrentShift(date: Date = new Date()): ShiftType {
   }
 }
 
+export function getShiftTimeRange(shift: ShiftType): string {
+  switch (shift) {
+    case 'PAGI':
+      return '08.00 - 15.00 WIB';
+    case 'SIANG':
+      return '15.00 - 22.00 WIB';
+    case 'MALAM':
+      return '22.00 - 08.00 WIB';
+    default:
+      return '';
+  }
+}
+
 export function getDateKey(date: Date = new Date()): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

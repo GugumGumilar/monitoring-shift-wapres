@@ -6,12 +6,14 @@ interface OfficerSelectProps {
   selectedOfficers: [string, string];
   onChange: (officers: [string, string]) => void;
   teamName: string;
+  disabled?: boolean;
 }
 
 export const OfficerSelect: React.FC<OfficerSelectProps> = ({
   selectedOfficers,
   onChange,
   teamName,
+  disabled = false,
 }) => {
   const [officer1, officer2] = selectedOfficers;
 
@@ -62,12 +64,13 @@ export const OfficerSelect: React.FC<OfficerSelectProps> = ({
           <select
             id={`officer-1-${teamName}`}
             value={officer1}
+            disabled={disabled}
             onChange={(e) => handleSelect1(e.target.value)}
-            className="w-full bg-zinc-950 border border-zinc-700 hover:border-zinc-600 focus:border-emerald-500 rounded-lg px-3 py-2.5 text-sm text-zinc-100 font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors"
+            className="w-full bg-zinc-950 border border-zinc-700 hover:border-zinc-600 focus:border-emerald-500 rounded-lg px-3 py-2.5 text-sm text-zinc-100 font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="">-- Pilih Petugas 1 --</option>
             {STAFF_LIST.map((name) => (
-              <option key={name} value={name} disabled={name === officer2}>
+              <option key={name} value={name} disabled={name === officer2 || disabled}>
                 {name} {name === officer2 ? '(Sudah dipilih sebagai Petugas 2)' : ''}
               </option>
             ))}
@@ -82,12 +85,13 @@ export const OfficerSelect: React.FC<OfficerSelectProps> = ({
           <select
             id={`officer-2-${teamName}`}
             value={officer2}
+            disabled={disabled}
             onChange={(e) => handleSelect2(e.target.value)}
-            className="w-full bg-zinc-950 border border-zinc-700 hover:border-zinc-600 focus:border-emerald-500 rounded-lg px-3 py-2.5 text-sm text-zinc-100 font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors"
+            className="w-full bg-zinc-950 border border-zinc-700 hover:border-zinc-600 focus:border-emerald-500 rounded-lg px-3 py-2.5 text-sm text-zinc-100 font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="">-- Pilih Petugas 2 --</option>
             {STAFF_LIST.map((name) => (
-              <option key={name} value={name} disabled={name === officer1}>
+              <option key={name} value={name} disabled={name === officer1 || disabled}>
                 {name} {name === officer1 ? '(Sudah dipilih sebagai Petugas 1)' : ''}
               </option>
             ))}
@@ -109,7 +113,9 @@ export const OfficerSelect: React.FC<OfficerSelectProps> = ({
                 type="button"
                 key={name}
                 id={`chip-${teamName}-${name.toLowerCase()}`}
+                disabled={disabled}
                 onClick={() => {
+                  if (disabled) return;
                   if (isP1) {
                     onChange(['', officer2]);
                   } else if (isP2) {
@@ -123,7 +129,7 @@ export const OfficerSelect: React.FC<OfficerSelectProps> = ({
                     onChange([officer1, name]);
                   }
                 }}
-                className={`text-xs px-2.5 py-1 rounded-md transition-all font-medium flex items-center gap-1 ${
+                className={`text-xs px-2.5 py-1 rounded-md transition-all font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed ${
                   isSelected
                     ? 'bg-emerald-600 text-white font-semibold shadow-xs'
                     : 'bg-zinc-800/90 text-zinc-300 hover:bg-zinc-700 hover:text-white'

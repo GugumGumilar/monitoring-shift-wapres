@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { AcoTMData, ACO_TM_PENYULANG_OPTIONS, TimWapresReport } from '../types';
+import { AcoTMData, ACO_TM_PENYULANG_OPTIONS, TimWapresReport, ShiftType } from '../types';
 import { OfficerSelect } from './OfficerSelect';
 import { UPSFormCard } from './UPSFormCard';
-import { GoogleSheetsSyncBar } from './GoogleSheetsSyncBar';
 import { ActiveSpreadsheetInfo } from '../services/googleSheets';
 import { User } from 'firebase/auth';
-import { formatIndonesianDate, formatIndonesianTime } from '../utils/formatters';
+import { formatIndonesianDate, formatIndonesianTime, getShiftTimeRange } from '../utils/formatters';
 import {
   Radio,
   ShieldCheck,
@@ -18,13 +17,17 @@ import {
   Calendar,
   FileSpreadsheet,
   RefreshCw,
+  Lock,
+  Users,
+  Edit3,
+  Zap,
 } from 'lucide-react';
 
 interface TimWapresFormProps {
   data: TimWapresReport;
   onChange: (data: TimWapresReport) => void;
   onSubmit: (data: TimWapresReport) => void;
-  shiftName: string;
+  shiftName: ShiftType | string;
   isAlreadySubmitted?: boolean;
   user?: User | null;
   activeSpreadsheet?: ActiveSpreadsheetInfo | null;
@@ -33,6 +36,9 @@ interface TimWapresFormProps {
   onQuickSyncAcoToSheets?: () => void;
   onQuickSyncWapresUps?: () => void;
   isSyncingSheets?: boolean;
+  isShiftTimeAllowed?: boolean;
+  currentActiveShift?: ShiftType | string;
+  onSwitchToActiveShift?: () => void;
 }
 
 export const TimWapresForm: React.FC<TimWapresFormProps> = ({
@@ -48,9 +54,13 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
   onQuickSyncAcoToSheets,
   onQuickSyncWapresUps,
   isSyncingSheets = false,
+  isShiftTimeAllowed = true,
+  currentActiveShift = 'PAGI',
+  onSwitchToActiveShift,
 }) => {
   const [liveTime, setLiveTime] = useState<string>(formatIndonesianTime());
   const [liveDate, setLiveDate] = useState<string>(formatIndonesianDate());
+  const [isChangingOfficers, setIsChangingOfficers] = useState<boolean>(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -83,6 +93,10 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isShiftTimeAllowed) {
+      alert(`Peringatan: Pengisian laporan dikunci karena belum waktu Shift ${shiftName}. Harap isi saat jam dinas shift kerja berlangsung.`);
+      return;
+    }
     if (!data.officers[0] || !data.officers[1]) {
       alert('Peringatan: Harap pilih 2 petugas piket Tim Wapres terlebih dahulu.');
       return;
@@ -101,7 +115,7 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
     onSubmit(updated);
   };
 
-  const hasOfficers = Boolean(data.officers[0] && data.officers[1]);
+  const hasOfficers = Boolean(data.officers[0] && data.officers[1] && data.officers[0] !== data.officers[1]);
 
   return (
     <form id="tim-wapres-form" onSubmit={handleFormSubmit} className="space-y-6">
@@ -139,24 +153,127 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         )}
       </div>
 
-      {/* Google Sheets Real-Time Status Bar */}
-      {onOpenGoogleSheets && (
-        <GoogleSheetsSyncBar
-          user={user}
-          activeSpreadsheet={activeSpreadsheet}
-          autoSyncEnabled={autoSyncEnabled}
-          onOpenSettings={onOpenGoogleSheets}
-          onQuickSync={onQuickSyncAcoToSheets || (() => {})}
-          isSyncing={isSyncingSheets}
-        />
+      {/* Peringatan Jika Bukan Waktu Shift Kerja */}
+      {!isShiftTimeAllowed && (
+        <div className="bg-amber-950/40 border border-amber-500/40 rounded-xl p-4 sm:p-5 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-bold text-sm sm:text-base text-amber-200">
+                  Input Data Dikunci — Belum Waktu Shift Kerja Ini
+                </h3>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  SOP Shift PLN
+                </span>
+              </div>
+              <p className="text-xs text-zinc-300 leading-relaxed">
+                Anda sedang melihat <strong>Shift {shiftName} ({getShiftTimeRange(shiftName as any)})</strong>. Jam dinas yang aktif saat ini adalah <strong>Shift {currentActiveShift} ({getShiftTimeRange(currentActiveShift as any)})</strong>.
+              </p>
+              <p className="text-xs text-amber-300/80">
+                Pengisian formulir baru hanya diizinkan saat jam dinas shift kerja berlangsung agar data riwayat valid dan akurat.
+              </p>
+            </div>
+          </div>
+
+          {onSwitchToActiveShift && currentActiveShift && (
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-amber-500/20">
+              <span className="text-xs text-zinc-400">
+                Beralih langsung ke shift yang sedang aktif sekarang:
+              </span>
+              <button
+                type="button"
+                onClick={onSwitchToActiveShift}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-sm transition-all cursor-pointer"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Buka Shift {currentActiveShift} Sekarang</span>
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
-      {/* 1. Officer Selection */}
-      <OfficerSelect
-        selectedOfficers={data.officers}
-        onChange={(officers) => onChange({ ...data, officers })}
-        teamName="Wapres"
-      />
+      {/* 1. Pemilihan Petugas (Muncul Sebelum Form Muncul) */}
+      {!hasOfficers ? (
+        <div className="space-y-4">
+          <div className="bg-zinc-900/80 border border-emerald-500/30 rounded-xl p-4 text-xs text-zinc-300 space-y-1">
+            <div className="flex items-center gap-2 font-bold text-emerald-400 text-sm">
+              <Users className="w-4 h-4" />
+              <span>Langkah 1: Tentukan 2 Petugas Piket Tim Wapres</span>
+            </div>
+            <p className="text-zinc-400">
+              Silakan pilih 2 petugas piket dari daftar resmi di bawah ini. Formulir inspeksi kelistrikan (ACO TM & UPS) akan otomatis terbuka setelah 2 petugas dipilih.
+            </p>
+          </div>
+
+          <OfficerSelect
+            selectedOfficers={data.officers}
+            onChange={(officers) => onChange({ ...data, officers })}
+            teamName="Wapres"
+            disabled={!isShiftTimeAllowed}
+          />
+
+          {/* Placeholder Kunci Form */}
+          <div className="bg-zinc-900/40 border border-dashed border-zinc-800 rounded-2xl p-8 text-center space-y-3">
+            <div className="mx-auto w-12 h-12 rounded-full bg-zinc-800/80 flex items-center justify-center text-zinc-400 border border-zinc-700/60">
+              <Lock className="w-6 h-6 text-emerald-400/70" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-zinc-200">Formulir Inspeksi Kelistrikan Masih Terkunci</h4>
+              <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
+                Pilih <strong>Petugas 1</strong> dan <strong>Petugas 2</strong> di atas terlebih dahulu untuk membuka formulir pemantauan ACO TM Gardu D 126 dan beban UPS Tim Wapres.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <Users className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Petugas Piket Terverifikasi</span>
+                </div>
+                <div className="text-sm font-bold text-zinc-100 flex items-center gap-2 mt-0.5">
+                  <span>{data.officers[0]}</span>
+                  <span className="text-zinc-500">&</span>
+                  <span>{data.officers[1]}</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsChangingOfficers(!isChangingOfficers)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition-colors self-start sm:self-auto cursor-pointer"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-zinc-400" />
+              <span>{isChangingOfficers ? 'Tutup Pilihan Petugas' : 'Ubah Petugas'}</span>
+            </button>
+          </div>
+
+          {/* Form Pemilihan Petugas (Jika ingin mengubah) */}
+          {isChangingOfficers && (
+            <OfficerSelect
+              selectedOfficers={data.officers}
+              onChange={(officers) => onChange({ ...data, officers })}
+              teamName="Wapres"
+              disabled={!isShiftTimeAllowed}
+            />
+          )}
+        </div>
+      )}
+
+      {/* 2. ACO TM & UPS FORMULIR (Hanya muncul jika Petugas sudah dipilih) */}
+      {hasOfficers && (
+        <>
 
       {/* 2. ACO TM Gardu D 126 SetWapres */}
       <div id="aco-tm-card" className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 md:p-5 space-y-4 shadow-sm">
@@ -592,9 +709,9 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             type="submit"
-            disabled={!hasOfficers}
+            disabled={!hasOfficers || !isShiftTimeAllowed}
             className={`w-full sm:w-auto px-6 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              hasOfficers
+              hasOfficers && isShiftTimeAllowed
                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40 cursor-pointer active:scale-95'
                 : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
             }`}
@@ -604,6 +721,8 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
           </button>
         </div>
       </div>
+      </>
+      )}
     </form>
   );
 };

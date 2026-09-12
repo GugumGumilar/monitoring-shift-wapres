@@ -14,8 +14,9 @@ import {
   FileSpreadsheet,
   Bell,
   Table,
+  Lock,
 } from 'lucide-react';
-import { formatIndonesianDate, formatIndonesianTime } from '../utils/formatters';
+import { formatIndonesianDate, formatIndonesianTime, getCurrentShift } from '../utils/formatters';
 
 interface HeaderProps {
   selectedShift: ShiftType;
@@ -200,22 +201,33 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="text-xs font-semibold text-zinc-400 mr-1 hidden sm:inline">Shift:</span>
             {SHIFTS.map((shift) => {
               const isSelected = selectedShift === shift.type;
+              const isLiveActive = getCurrentShift() === shift.type;
               return (
                 <button
                   type="button"
                   key={shift.type}
                   id={`shift-tab-${shift.type.toLowerCase()}`}
                   onClick={() => onSelectShift(shift.type)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     isSelected
-                      ? 'bg-zinc-100 text-zinc-900 shadow-md font-extrabold'
+                      ? 'bg-zinc-100 text-zinc-900 shadow-md font-extrabold ring-2 ring-emerald-500/50'
                       : 'bg-zinc-950/60 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-zinc-800'
                   }`}
                 >
+                  {isLiveActive ? (
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Shift yang sedang aktif saat ini" />
+                  ) : (
+                    <Lock className="w-3 h-3 text-zinc-500" title="Shift di luar jam dinas aktif saat ini" />
+                  )}
                   <span>{shift.label}</span>
                   <span className="text-[10px] opacity-75 font-mono hidden sm:inline">
                     ({shift.timeRange})
                   </span>
+                  {isLiveActive && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                      Aktif
+                    </span>
+                  )}
                 </button>
               );
             })}

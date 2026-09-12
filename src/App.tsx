@@ -73,6 +73,17 @@ export default function App() {
   const [selectedShift, setSelectedShift] = useState<ShiftType>(() => getCurrentShift());
   const [selectedDateKey, setSelectedDateKey] = useState<string>(() => getDateKey());
   const [selectedTeam, setSelectedTeam] = useState<'WAPRES' | 'RUMDIN'>('WAPRES');
+  const [liveActiveShift, setLiveActiveShift] = useState<ShiftType>(() => getCurrentShift());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveActiveShift(getCurrentShift());
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const isToday = selectedDateKey === getDateKey();
+  const isShiftTimeAllowed = isToday && selectedShift === liveActiveShift;
 
   // Reports state
   const [allReports, setAllReports] = useState<CombinedShiftReport[]>(() => getAllReports());
@@ -807,6 +818,12 @@ export default function App() {
             onQuickSyncAcoToSheets={handleQuickSyncAco}
             onQuickSyncWapresUps={handleQuickSyncWapresUps}
             isSyncingSheets={isSyncingSheets}
+            isShiftTimeAllowed={isShiftTimeAllowed}
+            currentActiveShift={liveActiveShift}
+            onSwitchToActiveShift={() => {
+              setSelectedDateKey(getDateKey());
+              setSelectedShift(liveActiveShift);
+            }}
           />
         ) : (
           <TimRumdinForm
@@ -824,6 +841,12 @@ export default function App() {
             onQuickSyncRumdinUps={handleQuickSyncRumdinUps}
             onQuickSyncAllRumdin={handleQuickSyncAllRumdin}
             isSyncingSheets={isSyncingSheets}
+            isShiftTimeAllowed={isShiftTimeAllowed}
+            currentActiveShift={liveActiveShift}
+            onSwitchToActiveShift={() => {
+              setSelectedDateKey(getDateKey());
+              setSelectedShift(liveActiveShift);
+            }}
           />
         )}
       </main>
