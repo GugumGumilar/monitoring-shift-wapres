@@ -1945,3 +1945,80 @@ export async function clearShiftSlotInGoogleSheets(
     message: `Baris slot Tanggal ${dayOfMonth} Shift ${shift} (Baris ${targetRow}) berhasil dikosongkan.`,
   };
 }
+
+/**
+ * Read shift inspection data and submission status directly from Google Sheets via REST API
+ */
+export async function readShiftDataFromGoogleSheets(
+  accessToken: string,
+  spreadsheetId: string,
+  dayOfMonth: number,
+  shift: ShiftType | string,
+  dateKey?: string
+): Promise<{
+  success: boolean;
+  isWapresSubmitted: boolean;
+  isRumdinSubmitted: boolean;
+  isBothSubmitted: boolean;
+  wapres: TimWapresReport | null;
+  rumdin: TimRumdinReport | null;
+  message?: string;
+}> {
+  const s = String(shift || 'PAGI').toUpperCase();
+  const offset = getShiftOffset(s);
+
+  const tmRow = 6 + (dayOfMonth - 1) * 3 + offset;
+  const st12Row = 105 + (dayOfMonth - 1) * 3 + offset;
+  const dipoRow = 204 + (dayOfMonth - 1) * 3 + offset;
+
+  const ups30Row = 7 + (dayOfMonth - 1) * 3 + offset;
+  const ups40WRow = 107 + (dayOfMonth - 1) * 3 + offset;
+  const ups60WRow = 207 + (dayOfMonth - 1) * 3 + offset;
+  const ups40DRow = 307 + (dayOfMonth - 1) * 3 + offset;
+  const ups100SRow = 407 + (dayOfMonth - 1) * 3 + offset;
+
+  const ranges = [
+    `LAPORAN_CETAK!A${tmRow}:Q${tmRow}`,
+    `LAPORAN_CETAK!A${st12Row}:Q${st12Row}`,
+    `LAPORAN_CETAK!A${dipoRow}:Q${dipoRow}`,
+    `LAPORAN_CETAK_UPS!A${ups30Row}:R${ups30Row}`,
+    `LAPORAN_CETAK_UPS!A${ups40WRow}:R${ups40WRow}`,
+    `LAPORAN_CETAK_UPS!A${ups60WRow}:R${ups60WRow}`,
+    `LAPORAN_CETAK_UPS!A${ups40DRow}:R${ups40DRow}`,
+    `LAPORAN_CETAK_UPS!A${ups100SRow}:R${ups100SRow}`,
+  ];
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${ranges
+    .map((r) => `ranges=${encodeURIComponent(r)}`)
+    .join('&')}`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || 'Gagal membaca data shift dari Google Sheets API.');
+  }
+
+  const batchData = await res.json();
+  const vr = batchData.valueRanges || [];
+  const getRow = (idx: number) => vr[idx]?.values?.[0] || [];
+
+  const { buildReportsFromRowArrays } = await import('./sheetReader');
+  const result = buildReportsFromRowArrays(
+    getRow(0),
+    getRow(1),
+    getRow(2),
+    getRow(3),
+    getRow(4),
+    getRow(5),
+    getRow(6),
+    getRow(7),
+    dateKey || new Date().toISOString(),
+    s as any
+  );
+
+  return result as any;
+}
+

@@ -66,7 +66,10 @@ import {
   ShieldAlert,
   Info,
   RotateCcw,
+  Database,
+  RefreshCw,
 } from 'lucide-react';
+import { fetchShiftDataFromSpreadsheet } from './services/sheetReader';
 
 export default function App() {
   // Current real-time shift
@@ -151,6 +154,111 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(
     null
   );
+
+  // Status deteksi submit langsung dari database Google Sheets
+  const [sheetStatus, setSheetStatus] = useState<{
+    isChecking: boolean;
+    isWapresSubmitted: boolean;
+    isRumdinSubmitted: boolean;
+    isBothSubmitted: boolean;
+    wapres: TimWapresReport | null;
+    rumdin: TimRumdinReport | null;
+    lastChecked: string | null;
+    error: string | null;
+  }>({
+    isChecking: false,
+    isWapresSubmitted: false,
+    isRumdinSubmitted: false,
+    isBothSubmitted: false,
+    wapres: null,
+    rumdin: null,
+    lastChecked: null,
+    error: null,
+  });
+
+  const checkSpreadsheetSubmission = async (silent = false) => {
+    const hasConnection = Boolean(
+      directWebhookUrl || directSheetLink || (accessToken && activeSpreadsheet)
+    );
+    if (!hasConnection) {
+      if (!silent) {
+        showToast('Google Sheets belum terhubung. Konfigurasikan Webhook atau login Google terlebih dahulu.', 'info');
+        setIsSheetsModalOpen(true);
+      }
+      return;
+    }
+
+    setSheetStatus((prev) => ({ ...prev, isChecking: true, error: null }));
+    try {
+      const res = await fetchShiftDataFromSpreadsheet({
+        dateKey: selectedDateKey,
+        shift: selectedShift,
+        webhookUrl: directWebhookUrl,
+        sheetLink: directSheetLink,
+        accessToken,
+        activeSpreadsheet,
+      });
+
+      if (res.success) {
+        setSheetStatus({
+          isChecking: false,
+          isWapresSubmitted: res.isWapresSubmitted,
+          isRumdinSubmitted: res.isRumdinSubmitted,
+          isBothSubmitted: res.isBothSubmitted,
+          wapres: res.wapres,
+          rumdin: res.rumdin,
+          lastChecked: formatIndonesianTime(new Date()),
+          error: null,
+        });
+
+        // Sinkronkan ke local report jika belum ada
+        let updated = false;
+        if (res.wapres && !currentReport?.wapres) {
+          submitWapresToShift(selectedDateKey, selectedShift, res.wapres);
+          setWapresData(res.wapres);
+          updated = true;
+        }
+        if (res.rumdin && !currentReport?.rumdin) {
+          submitRumdinToShift(selectedDateKey, selectedShift, res.rumdin);
+          setRumdinData(res.rumdin);
+          updated = true;
+        }
+        if (updated) {
+          setAllReports(getAllReports());
+        }
+
+        if (!silent) {
+          if (res.isBothSubmitted) {
+            showToast('✅ Kedua tim (Wapres & Rumdin) terdeteksi SUDAH submit di database Google Sheets!', 'success');
+          } else if (res.isWapresSubmitted) {
+            showToast('✅ Tim Wapres terdeteksi SUDAH submit di database Google Sheets.', 'success');
+          } else if (res.isRumdinSubmitted) {
+            showToast('✅ Tim Rumdin terdeteksi SUDAH submit di database Google Sheets.', 'success');
+          } else {
+            showToast('ℹ️ Baris shift ini belum diisi di Google Sheets (Belum Submit).', 'info');
+          }
+        }
+      } else {
+        setSheetStatus((prev) => ({ ...prev, isChecking: false, error: res.message || 'Gagal membaca sheet' }));
+        if (!silent) {
+          showToast(`Status Sheets: ${res.message || 'Gagal terhubung'}`, 'info');
+        }
+      }
+    } catch (err: any) {
+      console.warn('Check sheet error:', err);
+      setSheetStatus((prev) => ({ ...prev, isChecking: false, error: err.message }));
+      if (!silent) {
+        showToast(`Gagal membaca status Google Sheets: ${err.message}`, 'info');
+      }
+    }
+  };
+
+  // Otomatis cek database Google Sheets setiap kali tanggal atau shift berubah
+  useEffect(() => {
+    if (directWebhookUrl || directSheetLink || (accessToken && activeSpreadsheet)) {
+      checkSpreadsheetSubmission(true);
+    }
+  }, [selectedDateKey, selectedShift, directWebhookUrl, directSheetLink, accessToken, activeSpreadsheet]);
 
   // Firebase auth state listener with localStorage session recovery
   useEffect(() => {
@@ -702,8 +810,8 @@ export default function App() {
     }
   };
 
-  const isWapresSubmitted = Boolean(currentReport?.wapres);
-  const isRumdinSubmitted = Boolean(currentReport?.rumdin);
+  const isWapresSubmitted = Boolean(currentReport?.wapres) || sheetStatus.isWapresSubmitted;
+  const isRumdinSubmitted = Boolean(currentReport?.rumdin) || sheetStatus.isRumdinSubmitted;
   const isBothSubmitted = isWapresSubmitted && isRumdinSubmitted;
 
   return (
@@ -728,80 +836,149 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Status Bar */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-zinc-400">Status Pengisian Shift Ini:</span>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-zinc-400">Status Shift:</span>
 
-            {/* Wapres Status Badge */}
-            <button
-              type="button"
-              onClick={() => setSelectedTeam('WAPRES')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                isWapresSubmitted
-                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25'
-                  : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
-              }`}
-            >
-              {isWapresSubmitted ? (
-                <CheckCircle2 className="w-3.5 h-3.5" />
-              ) : (
-                <AlertCircle className="w-3.5 h-3.5" />
-              )}
-              <span>
-                Tim Wapres: {isWapresSubmitted ? `Selesai (${currentReport?.wapres?.inspectionTime})` : 'Belum Submit'}
-              </span>
-            </button>
-
-            {/* Rumdin Status Badge */}
-            <button
-              type="button"
-              onClick={() => setSelectedTeam('RUMDIN')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                isRumdinSubmitted
-                  ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25'
-                  : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
-              }`}
-            >
-              {isRumdinSubmitted ? (
-                <CheckCircle2 className="w-3.5 h-3.5" />
-              ) : (
-                <AlertCircle className="w-3.5 h-3.5" />
-              )}
-              <span>
-                Tim Rumdin: {isRumdinSubmitted ? `Selesai (${currentReport?.rumdin?.inspectionTime})` : 'Belum Submit'}
-              </span>
-            </button>
-
-            {/* Quick reset active form button */}
-            <button
-              type="button"
-              onClick={handleResetActiveForm}
-              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-200 bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/60 rounded-full transition-colors cursor-pointer ml-1"
-              title="Kosongkan nilai input pada tim aktif saat ini"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>Kosongkan Form</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {isBothSubmitted ? (
+              {/* Wapres Status Badge */}
               <button
                 type="button"
-                onClick={() => setIsPreviewOpen(true)}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md shadow-emerald-950 cursor-pointer"
+                onClick={() => setSelectedTeam('WAPRES')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  isWapresSubmitted
+                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25'
+                    : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
+                }`}
               >
-                <Send className="w-3.5 h-3.5" />
-                <span>Laporan Siap Kirim WA</span>
+                {isWapresSubmitted ? (
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                ) : (
+                  <AlertCircle className="w-3.5 h-3.5" />
+                )}
+                <span>
+                  Tim Wapres:{' '}
+                  {sheetStatus.isWapresSubmitted
+                    ? `Sudah Submit (Sheets ${sheetStatus.wapres?.inspectionTime || currentReport?.wapres?.inspectionTime || ''})`
+                    : isWapresSubmitted
+                    ? `Sudah Submit (${currentReport?.wapres?.inspectionTime || ''})`
+                    : 'Belum Submit'}
+                </span>
               </button>
-            ) : (
-              <div className="text-xs text-amber-400/90 flex items-center gap-1.5">
-                <Info className="w-3.5 h-3.5" />
-                <span>Isi kedua formulir tim untuk menggabungkan laporan utuh</span>
-              </div>
-            )}
+
+              {/* Rumdin Status Badge */}
+              <button
+                type="button"
+                onClick={() => setSelectedTeam('RUMDIN')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  isRumdinSubmitted
+                    ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25'
+                    : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
+                }`}
+              >
+                {isRumdinSubmitted ? (
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                ) : (
+                  <AlertCircle className="w-3.5 h-3.5" />
+                )}
+                <span>
+                  Tim Rumdin:{' '}
+                  {sheetStatus.isRumdinSubmitted
+                    ? `Sudah Submit (Sheets ${sheetStatus.rumdin?.inspectionTime || currentReport?.rumdin?.inspectionTime || ''})`
+                    : isRumdinSubmitted
+                    ? `Sudah Submit (${currentReport?.rumdin?.inspectionTime || ''})`
+                    : 'Belum Submit'}
+                </span>
+              </button>
+
+              {/* Cek Database Sheets Button */}
+              <button
+                type="button"
+                onClick={() => checkSpreadsheetSubmission(false)}
+                disabled={sheetStatus.isChecking}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-full transition-colors cursor-pointer disabled:opacity-50"
+                title="Periksa database Google Sheets apakah laporan shift ini sudah disubmit"
+              >
+                <RefreshCw className={`w-3 h-3 ${sheetStatus.isChecking ? 'animate-spin' : ''}`} />
+                <span>{sheetStatus.isChecking ? 'Mengecek Sheets...' : 'Cek Status Sheets'}</span>
+              </button>
+
+              {/* Quick reset active form button */}
+              <button
+                type="button"
+                onClick={handleResetActiveForm}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-200 bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/60 rounded-full transition-colors cursor-pointer ml-1"
+                title="Kosongkan nilai input pada tim aktif saat ini"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Kosongkan Form</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {isBothSubmitted ? (
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewOpen(true)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md shadow-emerald-950 cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Laporan Siap Kirim WA</span>
+                </button>
+              ) : (
+                <div className="text-xs text-amber-400/90 flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5" />
+                  <span>Isi formulir atau sinkron database Sheets untuk laporan utuh</span>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Database Sheets verification banner if submitted in sheet */}
+          {(sheetStatus.isWapresSubmitted || sheetStatus.isRumdinSubmitted) && (
+            <div className="pt-2 border-t border-zinc-800/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2 text-emerald-400">
+                <Database className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  <strong>Terdeteksi di Database Sheets:</strong>{' '}
+                  {sheetStatus.isBothSubmitted
+                    ? 'Laporan Tim Wapres & Tim Rumdin sudah tersimpan lengkap di Google Sheets.'
+                    : sheetStatus.isWapresSubmitted
+                    ? 'Laporan Tim Wapres sudah tersimpan di Google Sheets.'
+                    : 'Laporan Tim Rumdin sudah tersimpan di Google Sheets.'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (sheetStatus.wapres) {
+                      setWapresData(sheetStatus.wapres);
+                      submitWapresToShift(selectedDateKey, selectedShift, sheetStatus.wapres);
+                    }
+                    if (sheetStatus.rumdin) {
+                      setRumdinData(sheetStatus.rumdin);
+                      submitRumdinToShift(selectedDateKey, selectedShift, sheetStatus.rumdin);
+                    }
+                    setAllReports(getAllReports());
+                    showToast('Data dari Google Sheets berhasil dimuat ke formulir!');
+                  }}
+                  className="px-2.5 py-1 text-xs text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-md transition-colors cursor-pointer"
+                >
+                  Muat Data Sheets ke Formulir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewOpen(true)}
+                  className="px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-md transition-colors cursor-pointer"
+                >
+                  Buka Format WA
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+
 
         {/* Active Team Form */}
         {selectedTeam === 'WAPRES' ? (
@@ -881,6 +1058,28 @@ export default function App() {
         onRefreshTimestamp={handleRefreshReportTimestamp}
         onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
         activeSpreadsheet={activeSpreadsheet}
+        directWebhookUrl={directWebhookUrl}
+        directSheetLink={directSheetLink}
+        accessToken={accessToken}
+        onLoadFromSheet={(w, r) => {
+          if (w) {
+            submitWapresToShift(selectedDateKey, selectedShift, w);
+            setWapresData(w);
+          }
+          if (r) {
+            submitRumdinToShift(selectedDateKey, selectedShift, r);
+            setRumdinData(r);
+          }
+          setAllReports(getAllReports());
+          setSheetStatus((prev) => ({
+            ...prev,
+            isWapresSubmitted: Boolean(w || prev.isWapresSubmitted),
+            isRumdinSubmitted: Boolean(r || prev.isRumdinSubmitted),
+            isBothSubmitted: Boolean((w || prev.isWapresSubmitted) && (r || prev.isRumdinSubmitted)),
+            wapres: w || prev.wapres,
+            rumdin: r || prev.rumdin,
+          }));
+        }}
       />
 
       <HistoryModal

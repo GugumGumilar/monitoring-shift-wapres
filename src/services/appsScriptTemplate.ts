@@ -57,6 +57,28 @@ function onOpen() {
 }
 
 function doGet(e) {
+  var action = (e && e.parameter && e.parameter.action) || "";
+  if (action === "GET_SHIFT_DATA" || action === "CHECK_SUBMISSION") {
+    try {
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var shiftData = getShiftDataFromSheets(
+        ss,
+        e.parameter.inspectionDate,
+        e.parameter.shift,
+        e.parameter.dayOfMonth
+      );
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        data: shiftData
+      })).setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: err.toString()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   return ContentService.createTextOutput(JSON.stringify({
     status: "success",
     message: "Webhook Monitoring Shift PLN Aktif dan Siap Digunakan!"
@@ -71,6 +93,15 @@ function doPost(e) {
 
     if (data.action === "PING") {
       return responseSuccess("Koneksi Webhook Google Sheets Berhasil dan Aktif!");
+    }
+
+    // 0. BACA DATA SHIFT & CEK STATUS SUBMISSION DARI DATABASE SPREADSHEET
+    if (data.action === "GET_SHIFT_DATA" || data.action === "CHECK_SUBMISSION") {
+      var shiftData = getShiftDataFromSheets(ss, data.inspectionDate, data.shift, data.dayOfMonth);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        data: shiftData
+      })).setMimeType(ContentService.MimeType.JSON);
     }
 
     if (data.action === "TIDY_SHEETS" || data.action === "FORMAT_ALL") {
@@ -1016,5 +1047,181 @@ function buatSemuaTriggerOtomatis() {
   try {
     SpreadsheetApp.getActiveSpreadsheet().toast("Semua otomasi bulanan aktif! Arsip (Tgl 1 Jam 06:00) & Reset (Tgl 1 Jam 07:00)", "🚀 Otomasi Penuh Aktif", 10);
   } catch (e) {}
+}
+
+/**
+ * Membaca data shift dari spreadsheet untuk mendeteksi status submit & mengambil data WA
+ */
+function getShiftDataFromSheets(ss, inspectionDate, shift, dayOfMonth) {
+  var d = parseDayOfMonth(inspectionDate, dayOfMonth);
+  var offset = getShiftOffset(shift);
+
+  var lapCetak = ss.getSheetByName("LAPORAN_CETAK");
+  var lapUps = ss.getSheetByName("LAPORAN_CETAK_UPS");
+
+  var tmRow = 6 + (d - 1) * 3 + offset;
+  var st12Row = 105 + (d - 1) * 3 + offset;
+  var dipoRow = 204 + (d - 1) * 3 + offset;
+
+  var ups30Row = 7 + (d - 1) * 3 + offset;
+  var ups40WRow = 107 + (d - 1) * 3 + offset;
+  var ups60WRow = 207 + (d - 1) * 3 + offset;
+  var ups40DRow = 307 + (d - 1) * 3 + offset;
+  var ups100SRow = 407 + (d - 1) * 3 + offset;
+
+  var acoTmValues = (lapCetak && tmRow <= lapCetak.getLastRow()) ? lapCetak.getRange(tmRow, 1, 1, 17).getValues()[0] : [];
+  var acoSt12Values = (lapCetak && st12Row <= lapCetak.getLastRow()) ? lapCetak.getRange(st12Row, 1, 1, 17).getValues()[0] : [];
+  var acoDipoValues = (lapCetak && dipoRow <= lapCetak.getLastRow()) ? lapCetak.getRange(dipoRow, 1, 1, 17).getValues()[0] : [];
+
+  var ups30Values = (lapUps && ups30Row <= lapUps.getLastRow()) ? lapUps.getRange(ups30Row, 1, 1, 18).getValues()[0] : [];
+  var ups40WValues = (lapUps && ups40WRow <= lapUps.getLastRow()) ? lapUps.getRange(ups40WRow, 1, 1, 18).getValues()[0] : [];
+  var ups60WValues = (lapUps && ups60WRow <= lapUps.getLastRow()) ? lapUps.getRange(ups60WRow, 1, 1, 18).getValues()[0] : [];
+  var ups40DValues = (lapUps && ups40DRow <= lapUps.getLastRow()) ? lapUps.getRange(ups40DRow, 1, 1, 18).getValues()[0] : [];
+  var ups100SValues = (lapUps && ups100SRow <= lapUps.getLastRow()) ? lapUps.getRange(ups100SRow, 1, 1, 18).getValues()[0] : [];
+
+  function isFilled(row) {
+    if (!row || row.length < 4) return false;
+    var off = String(row[1] || "").trim();
+    var jam = String(row[3] || "").trim();
+    if (off && off !== "-" && off !== "NAMA PETUGAS") return true;
+    if (jam && jam !== "-" && jam !== "WIB") return true;
+    for (var i = 4; i < Math.min(row.length, 18); i++) {
+      var v = String(row[i] || "").trim();
+      if (v && v !== "-" && v !== "0") return true;
+    }
+    return false;
+  }
+
+  function cleanVal(v) {
+    if (v === undefined || v === null) return "";
+    var s = String(v).trim();
+    if (s === "-" || s.toLowerCase() === "null") return "";
+    return s.replace(/\\s*(A|V|°C|Jam|Menit)\\b/gi, "").trim();
+  }
+
+  function parseOfficers(cell) {
+    if (!cell) return ["", ""];
+    var s = String(cell).trim();
+    if (!s || s === "-") return ["", ""];
+    var p = s.split(/[,/&]/);
+    var o1 = (p[0] || "").trim();
+    var o2 = (p[1] || "").trim();
+    return [o1, o2];
+  }
+
+  function parseUps(row) {
+    var alarm = String(row[14] || "").toUpperCase().indexOf("ALARM") !== -1 ? "ALARM" : "NORMAL";
+    return {
+      loadR: cleanVal(row[4]),
+      loadS: cleanVal(row[5]),
+      loadT: cleanVal(row[6]),
+      voltRN: cleanVal(row[7]),
+      voltSN: cleanVal(row[8]),
+      voltTN: cleanVal(row[9]),
+      voltRS: cleanVal(row[10]),
+      voltRT: cleanVal(row[11]),
+      voltST: cleanVal(row[12]),
+      temperature: cleanVal(row[13]),
+      alarm: alarm,
+      backupHours: cleanVal(row[15]),
+      backupMinutes: cleanVal(row[16]),
+      keterangan: String(row[17] || "-").trim() || "-"
+    };
+  }
+
+  var isWapresSubmitted = isFilled(acoTmValues) || isFilled(ups30Values) || isFilled(ups40WValues) || isFilled(ups60WValues);
+  var isRumdinSubmitted = isFilled(acoDipoValues) || isFilled(acoSt12Values) || isFilled(ups40DValues) || isFilled(ups100SValues);
+
+  var wapres = null;
+  if (isWapresSubmitted) {
+    var offW = parseOfficers(acoTmValues[1] || ups30Values[1]);
+    var tglW = String(acoTmValues[2] || ups30Values[2] || inspectionDate || "").trim();
+    var jamW = String(acoTmValues[3] || ups30Values[3] || "WIB").trim();
+    if (jamW.toUpperCase().indexOf("WIB") === -1) jamW += " WIB";
+
+    var penyClose = String(acoTmValues[4] || "").trim();
+    var penyOpen = String(acoTmValues[5] || "").trim();
+    var alW = String(acoTmValues[6] || "").toUpperCase().indexOf("ALARM") !== -1 ? "ALARM" : "NORMAL";
+    var pwrW = String(acoTmValues[9] || "").toUpperCase().indexOf("OFF") !== -1 ? "OFF" : "ON";
+    var chgW = String(acoTmValues[11] || "").toUpperCase().indexOf("TIDAK") !== -1 ? "TIDAK" : "YA";
+    var rmtW = String(acoTmValues[12] || "").toUpperCase().indexOf("LOCAL") !== -1 ? "LOCAL" : "AUTO";
+    var lmpW = String(acoTmValues[15] || "").toUpperCase().indexOf("OFF") !== -1 ? "OFF" : "ON";
+
+    wapres = {
+      officers: offW,
+      inspectionDate: tglW,
+      inspectionTime: jamW,
+      ups30: parseUps(ups30Values),
+      ups40: parseUps(ups40WValues),
+      ups60: parseUps(ups60WValues),
+      acoTM: {
+        penyulangClose: penyClose || "P HAYAM WURUK GI GAMBIR LAMA",
+        penyulangOpen: penyOpen || "KOPEL ACO (KS19 P KALINGGA GI GAMBIR LAMA)",
+        alarmStatus: alW,
+        powerACO: pwrW,
+        chargingKubikel: chgW,
+        remoteKubikel: rmtW,
+        lampuIndikator: lmpW,
+        keterangan: String(acoTmValues[16] || "-").trim() || "-"
+      },
+      submittedAt: new Date().toISOString()
+    };
+  }
+
+  var rumdin = null;
+  if (isRumdinSubmitted) {
+    var offR = parseOfficers(acoDipoValues[1] || acoSt12Values[1] || ups40DValues[1]);
+    var tglR = String(acoDipoValues[2] || acoSt12Values[2] || ups40DValues[2] || inspectionDate || "").trim();
+    var jamR = String(acoDipoValues[3] || acoSt12Values[3] || ups40DValues[3] || "WIB").trim();
+    if (jamR.toUpperCase().indexOf("WIB") === -1) jamR += " WIB";
+
+    var d15 = String(acoDipoValues[4] || "").toUpperCase().indexOf("OPEN") !== -1 ? "OPEN" : "CLOSE";
+    var d135 = String(acoDipoValues[5] || "").toUpperCase().indexOf("CLOSE") !== -1 ? "CLOSE" : "OPEN";
+    var dAl = String(acoDipoValues[6] || "").toUpperCase().indexOf("ALARM") !== -1 ? "ALARM" : "NORMAL";
+    var dPwr = String(acoDipoValues[9] || "").toUpperCase().indexOf("OFF") !== -1 ? "OFF" : "ON";
+    var dLmp = String(acoDipoValues[15] || "").toUpperCase().indexOf("OFF") !== -1 ? "OFF" : "ON";
+
+    var sClose = String(acoSt12Values[4] || "").trim();
+    var sOpen = String(acoSt12Values[5] || "").trim();
+    var sAl = String(acoSt12Values[6] || "").toUpperCase().indexOf("ALARM") !== -1 ? "ALARM" : "NORMAL";
+    var sPwr = String(acoSt12Values[9] || "").toUpperCase().indexOf("OFF") !== -1 ? "OFF" : "ON";
+    var sLmp = String(acoSt12Values[15] || "").toUpperCase().indexOf("OFF") !== -1 ? "OFF" : "ON";
+    var isT93 = sClose.toUpperCase().indexOf("T93") !== -1 || (!sOpen.toUpperCase().indexOf("T10B") && !sClose.toUpperCase().indexOf("T10B"));
+
+    rumdin = {
+      officers: offR,
+      inspectionDate: tglR,
+      inspectionTime: jamR,
+      acoTRDipo: {
+        garduT15NStatus: d15,
+        garduT135Status: d135,
+        alarmStatus: dAl,
+        powerACO: dPwr,
+        lampuIndikator: dLmp,
+        keterangan: String(acoDipoValues[16] || "-").trim() || "-"
+      },
+      acoTRST12: {
+        garduT93Status: isT93 ? "CLOSE" : "OPEN",
+        garduT10BStatus: isT93 ? "OPEN" : "CLOSE",
+        penyulangClose: sClose || (isT93 ? "GARDU T93" : "GARDU T10B"),
+        penyulangOpen: sOpen || (isT93 ? "GARDU T10B" : "GARDU T93"),
+        alarmStatus: sAl,
+        powerACO: sPwr,
+        lampuIndikator: sLmp,
+        keterangan: String(acoSt12Values[16] || "-").trim() || "-"
+      },
+      ups40Dipo: parseUps(ups40DValues),
+      ups100ST12: parseUps(ups100SValues),
+      submittedAt: new Date().toISOString()
+    };
+  }
+
+  return {
+    isWapresSubmitted: isWapresSubmitted,
+    isRumdinSubmitted: isRumdinSubmitted,
+    isBothSubmitted: isWapresSubmitted && isRumdinSubmitted,
+    wapres: wapres,
+    rumdin: rumdin
+  };
 }
 `;

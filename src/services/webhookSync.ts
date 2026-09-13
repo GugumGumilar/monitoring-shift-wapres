@@ -604,6 +604,40 @@ export async function triggerSetupAllTriggersViaWebhook(
 }
 
 /**
+ * Fetch shift inspection data & submission status from Google Sheets via Webhook
+ */
+export async function getShiftDataViaWebhook(
+  webhookUrl: string,
+  inspectionDate: string,
+  shift: ShiftType | string
+): Promise<{
+  success: boolean;
+  message?: string;
+  isWapresSubmitted?: boolean;
+  isRumdinSubmitted?: boolean;
+  isSubmitted?: boolean;
+  wapres?: TimWapresReport | null;
+  rumdin?: TimRumdinReport | null;
+  data?: any;
+}> {
+  const dayOfMonth = extractDayOfMonth(inspectionDate);
+  try {
+    const res = await sendToWebhook(webhookUrl, {
+      action: 'GET_SHIFT_DATA',
+      inspectionDate: formatToDDMMYYYY(inspectionDate),
+      shift,
+      dayOfMonth,
+    });
+    return res as any;
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err.message || 'Gagal mengambil data shift dari webhook',
+    };
+  }
+}
+
+/**
  * Complete Google Apps Script template ready to be pasted into Extensions > Apps Script
  */
 export { GOOGLE_APPS_SCRIPT_CODE } from './appsScriptTemplate';

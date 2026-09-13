@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { CombinedShiftReport } from '../types';
+import React, { useState, useEffect } from 'react';
+import { CombinedShiftReport, TimWapresReport, TimRumdinReport } from '../types';
 import { generateWhatsAppReport, formatIndonesianTime } from '../utils/formatters';
 import { ActiveSpreadsheetInfo } from '../services/googleSheets';
+import { fetchShiftDataFromSpreadsheet } from '../services/sheetReader';
 import {
   X,
   Share2,
@@ -16,6 +17,8 @@ import {
   RotateCw,
   FileSpreadsheet,
   ExternalLink,
+  Database,
+  RefreshCw,
 } from 'lucide-react';
 
 interface ReportPreviewModalProps {
@@ -25,6 +28,10 @@ interface ReportPreviewModalProps {
   onRefreshTimestamp?: () => void;
   onOpenGoogleSheets?: () => void;
   activeSpreadsheet?: ActiveSpreadsheetInfo | null;
+  directWebhookUrl?: string | null;
+  directSheetLink?: string | null;
+  accessToken?: string | null;
+  onLoadFromSheet?: (fetchedWapres: TimWapresReport | null, fetchedRumdin: TimRumdinReport | null) => void;
 }
 
 export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
@@ -34,15 +41,117 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
   onRefreshTimestamp,
   onOpenGoogleSheets,
   activeSpreadsheet,
+  directWebhookUrl,
+  directSheetLink,
+  accessToken,
+  onLoadFromSheet,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [sheetReport, setSheetReport] = useState<CombinedShiftReport | null>(null);
+  const [isFetchingSheet, setIsFetchingSheet] = useState(false);
+  const [dataSource, setDataSource] = useState<'spreadsheet' | 'local'>('local');
+  const [lastFetchedTime, setLastFetchedTime] = useState<string | null>(null);
+  const [sheetFetchNotice, setSheetFetchNotice] = useState<string | null>(null);
+
+  // Automatically fetch fresh data from Google Sheets when the modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const loadDataFromSpreadsheet = async () => {
+      const hasConnection = Boolean(
+        directWebhookUrl || directSheetLink || (accessToken && activeSpreadsheet)
+      );
+      if (!hasConnection) {
+        setDataSource('local');
+        return;
+      }
+
+      setIsFetchingSheet(true);
+      setSheetFetchNotice('Menghubungkan ke database Google Sheets...');
+      try {
+        const res = await fetchShiftDataFromSpreadsheet({
+          dateKey: report.dateKey,
+          shift: report.shift,
+          webhookUrl: directWebhookUrl,
+          sheetLink: directSheetLink,
+          accessToken,
+          activeSpreadsheet,
+        });
+
+        if (res.success && (res.wapres || res.rumdin)) {
+          const merged: CombinedShiftReport = {
+            ...report,
+            wapres: res.wapres || report.wapres,
+            rumdin: res.rumdin || report.rumdin,
+            updatedAt: new Date().toISOString(),
+          };
+          setSheetReport(merged);
+          setDataSource('spreadsheet');
+          setLastFetchedTime(formatIndonesianTime(new Date()));
+          setSheetFetchNotice(res.message || 'Data berhasil diambil dari database Google Sheets!');
+          if (onLoadFromSheet) {
+            onLoadFromSheet(res.wapres, res.rumdin);
+          }
+        } else {
+          setDataSource('local');
+          setSheetFetchNotice('Belum ada data baru di Spreadsheet, menampilkan data lokal.');
+        }
+      } catch (err: any) {
+        console.warn('Gagal membaca dari spreadsheet:', err);
+        setDataSource('local');
+        setSheetFetchNotice('Gagal mengambil dari Google Sheets, menggunakan data formulir.');
+      } finally {
+        setIsFetchingSheet(false);
+      }
+    };
+
+    loadDataFromSpreadsheet();
+  }, [isOpen, report.dateKey, report.shift, directWebhookUrl, directSheetLink, accessToken, activeSpreadsheet]);
 
   if (!isOpen) return null;
 
-  const fullText = generateWhatsAppReport(report);
-  const isWapresComplete = Boolean(report.wapres);
-  const isRumdinComplete = Boolean(report.rumdin);
+  const activeReport = (dataSource === 'spreadsheet' && sheetReport) ? sheetReport : report;
+  const fullText = generateWhatsAppReport(activeReport);
+  const isWapresComplete = Boolean(activeReport.wapres);
+  const isRumdinComplete = Boolean(activeReport.rumdin);
   const isBothComplete = isWapresComplete && isRumdinComplete;
+
+  const handleManualRefreshFromSheet = async () => {
+    setIsFetchingSheet(true);
+    setSheetFetchNotice('Menyegarkan dari database Google Sheets...');
+    try {
+      const res = await fetchShiftDataFromSpreadsheet({
+        dateKey: report.dateKey,
+        shift: report.shift,
+        webhookUrl: directWebhookUrl,
+        sheetLink: directSheetLink,
+        accessToken,
+        activeSpreadsheet,
+      });
+
+      if (res.success && (res.wapres || res.rumdin)) {
+        const merged: CombinedShiftReport = {
+          ...report,
+          wapres: res.wapres || report.wapres,
+          rumdin: res.rumdin || report.rumdin,
+          updatedAt: new Date().toISOString(),
+        };
+        setSheetReport(merged);
+        setDataSource('spreadsheet');
+        setLastFetchedTime(formatIndonesianTime(new Date()));
+        setSheetFetchNotice('Data WhatsApp berhasil diperbarui dari database Google Sheets!');
+        if (onLoadFromSheet) {
+          onLoadFromSheet(res.wapres, res.rumdin);
+        }
+      } else {
+        setSheetFetchNotice(res.message || 'Tidak ada perubahan data di spreadsheet.');
+      }
+    } catch (err: any) {
+      setSheetFetchNotice(`Gagal membaca spreadsheet: ${err.message}`);
+    } finally {
+      setIsFetchingSheet(false);
+    }
+  };
 
   const handleCopy = async () => {
     try {
@@ -62,9 +171,39 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
     }
   };
 
-  const handleSendWhatsApp = () => {
-    const encoded = encodeURIComponent(fullText);
-    // Open web whatsapp or whatsapp app
+  const handleSendWhatsApp = async () => {
+    // Before sending, if not fetched yet, try a quick refresh
+    let textToSend = fullText;
+    if (dataSource !== 'spreadsheet' && (directWebhookUrl || directSheetLink || accessToken)) {
+      try {
+        setIsFetchingSheet(true);
+        const res = await fetchShiftDataFromSpreadsheet({
+          dateKey: report.dateKey,
+          shift: report.shift,
+          webhookUrl: directWebhookUrl,
+          sheetLink: directSheetLink,
+          accessToken,
+          activeSpreadsheet,
+        });
+        if (res.success && (res.wapres || res.rumdin)) {
+          const merged: CombinedShiftReport = {
+            ...report,
+            wapres: res.wapres || report.wapres,
+            rumdin: res.rumdin || report.rumdin,
+            updatedAt: new Date().toISOString(),
+          };
+          setSheetReport(merged);
+          setDataSource('spreadsheet');
+          textToSend = generateWhatsAppReport(merged);
+        }
+      } catch (e) {
+        console.warn('Quick fetch before WA send failed:', e);
+      } finally {
+        setIsFetchingSheet(false);
+      }
+    }
+
+    const encoded = encodeURIComponent(textToSend);
     const url = `https://api.whatsapp.com/send?text=${encoded}`;
     window.open(url, '_blank');
   };
@@ -73,7 +212,7 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
     const element = document.createElement('a');
     const file = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
     element.href = URL.createObjectURL(file);
-    element.download = `Laporan_Shift_${report.shift}_${report.dateKey}.txt`;
+    element.download = `Laporan_Shift_${activeReport.shift}_${activeReport.dateKey}.txt`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -90,10 +229,10 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-zinc-100 text-lg">
-                Format Laporan WhatsApp - Shift {report.shift}
+                Format Laporan WhatsApp - Shift {activeReport.shift}
               </h3>
               <p className="text-xs text-zinc-400">
-                Tanggal: <span className="font-semibold text-zinc-200">{report.displayDate}</span>
+                Tanggal: <span className="font-semibold text-zinc-200">{activeReport.displayDate}</span>
               </p>
             </div>
           </div>
@@ -101,10 +240,42 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Sumber Data Banner (Spreadsheet vs Local) */}
+        <div className="px-5 py-2.5 bg-emerald-950/30 border-b border-emerald-500/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <Database className="w-4 h-4 text-emerald-400 shrink-0" />
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-semibold text-emerald-300">
+                {dataSource === 'spreadsheet'
+                  ? 'Data Format WA Diambil Langsung dari Database Spreadsheet'
+                  : 'Data Format WA Menggunakan Data Formulir'}
+              </span>
+              {lastFetchedTime && (
+                <span className="text-zinc-400 text-[11px] bg-zinc-800/80 px-2 py-0.5 rounded border border-zinc-700">
+                  Update: {lastFetchedTime}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleManualRefreshFromSheet}
+              disabled={isFetchingSheet}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              title="Ambil data paling mutakhir dari Google Sheets untuk teks WA"
+            >
+              <RotateCw className={`w-3.5 h-3.5 ${isFetchingSheet ? 'animate-spin' : ''}`} />
+              <span>{isFetchingSheet ? 'Mengambil...' : 'Segarkan dari Spreadsheet'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Status completion badges */}
@@ -118,7 +289,7 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
               }`}
             >
               {isWapresComplete ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-              Tim Wapres: {isWapresComplete ? `Selesai (${report.wapres?.inspectionTime || '-'})` : 'Belum Submit'}
+              Tim Wapres: {isWapresComplete ? `Selesai (${activeReport.wapres?.inspectionTime || '-'})` : 'Belum Submit'}
             </span>
 
             <span
@@ -129,7 +300,7 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
               }`}
             >
               {isRumdinComplete ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-              Tim Rumdin: {isRumdinComplete ? `Selesai (${report.rumdin?.inspectionTime || '-'})` : 'Belum Submit'}
+              Tim Rumdin: {isRumdinComplete ? `Selesai (${activeReport.rumdin?.inspectionTime || '-'})` : 'Belum Submit'}
             </span>
           </div>
 
@@ -173,7 +344,7 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
             <button
               type="button"
               onClick={handleCopy}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-colors"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-colors cursor-pointer"
             >
               {copied ? (
                 <>
@@ -191,7 +362,7 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
             <button
               type="button"
               onClick={handleDownload}
-              className="inline-flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition-colors cursor-pointer"
               title="Unduh file .txt"
             >
               <Download className="w-4 h-4" />
@@ -215,13 +386,15 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
             type="button"
             id="whatsapp-share-btn"
             onClick={handleSendWhatsApp}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white shadow-lg shadow-emerald-950 transition-all cursor-pointer"
+            disabled={isFetchingSheet}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white shadow-lg shadow-emerald-950 transition-all cursor-pointer disabled:opacity-60"
           >
             <Send className="w-4 h-4" />
-            <span>Kirim ke WhatsApp</span>
+            <span>{isFetchingSheet ? 'Mengambil Data Sheets...' : 'Kirim ke WhatsApp'}</span>
           </button>
         </div>
       </div>
     </div>
   );
 };
+
