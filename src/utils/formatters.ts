@@ -1,18 +1,18 @@
 import { CombinedShiftReport, ShiftType, TimRumdinReport, TimWapresReport, UPSData } from '../types';
 
-const MONTH_NAMES = [
-  'JANUARI',
-  'FEBRUARI',
-  'MARET',
-  'APRIL',
-  'MEI',
-  'JUNI',
-  'JULI',
-  'AGUSTUS',
-  'SEPTEMBER',
-  'OKTOBER',
-  'NOVEMBER',
-  'DESEMBER',
+export const MONTH_NAMES = [
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember',
 ];
 
 export function formatIndonesianDate(date: Date = new Date()): string {
@@ -21,6 +21,80 @@ export function formatIndonesianDate(date: Date = new Date()): string {
   const year = date.getFullYear();
   return `${day} ${month} ${year}`;
 }
+
+/**
+ * Normalizes any date string (including JavaScript Date strings like
+ * "Sun Sep 13 2026 00:00:00 GMT+0700 (中南半島時間)", ISO strings, DD/MM/YYYY, etc.)
+ * into standard clean Indonesian date: "12 April 2026" / "13 September 2026".
+ */
+export function normalizeIndonesianDate(inputDate?: any): string {
+  if (!inputDate) return formatIndonesianDate(new Date());
+  if (inputDate instanceof Date) {
+    if (isNaN(inputDate.getTime())) return formatIndonesianDate(new Date());
+    return formatIndonesianDate(inputDate);
+  }
+
+  const str = String(inputDate).trim();
+  if (!str || str === '-' || str.toLowerCase() === 'null') {
+    return formatIndonesianDate(new Date());
+  }
+
+  // If already formatted like "12 April 2026" or "12 APRIL 2026"
+  const indoWordMatch = str.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+  if (indoWordMatch) {
+    const day = parseInt(indoWordMatch[1], 10);
+    const mStr = indoWordMatch[2].toUpperCase();
+    const year = indoWordMatch[3];
+    const MAP: Record<string, string> = {
+      JAN: 'Januari', JANUARI: 'Januari', JANUARY: 'Januari',
+      FEB: 'Februari', FEBRUARI: 'Februari', FEBRUARY: 'Februari',
+      MAR: 'Maret', MARET: 'Maret', MARCH: 'Maret',
+      APR: 'April', APRIL: 'April',
+      MEI: 'Mei', MAY: 'Mei',
+      JUN: 'Juni', JUNI: 'Juni', JUNE: 'Juni',
+      JUL: 'Juli', JULI: 'Juli', JULY: 'Juli',
+      AGU: 'Agustus', AGUSTUS: 'Agustus', AUG: 'Agustus', AUGUST: 'Agustus',
+      SEP: 'September', SEPTEMBER: 'September',
+      OKT: 'Oktober', OKTOBER: 'Oktober', OCT: 'Oktober', OCTOBER: 'Oktober',
+      NOV: 'November', NOVEMBER: 'November',
+      DES: 'Desember', DESEMBER: 'Desember', DEC: 'Desember', DECEMBER: 'Desember',
+    };
+    if (MAP[mStr]) {
+      return `${day} ${MAP[mStr]} ${year}`;
+    }
+  }
+
+  // Check DD/MM/YYYY or DD-MM-YYYY
+  const ddmmyyyy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (ddmmyyyy) {
+    const day = parseInt(ddmmyyyy[1], 10);
+    const mIdx = parseInt(ddmmyyyy[2], 10) - 1;
+    const year = ddmmyyyy[3];
+    if (mIdx >= 0 && mIdx < 12) {
+      return `${day} ${MONTH_NAMES[mIdx]} ${year}`;
+    }
+  }
+
+  // Check YYYY-MM-DD (e.g. 2026-09-13)
+  const yyyymmdd = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (yyyymmdd) {
+    const year = yyyymmdd[1];
+    const mIdx = parseInt(yyyymmdd[2], 10) - 1;
+    const day = parseInt(yyyymmdd[3], 10);
+    if (mIdx >= 0 && mIdx < 12) {
+      return `${day} ${MONTH_NAMES[mIdx]} ${year}`;
+    }
+  }
+
+  // Parse strings like "Sun Sep 13 2026 00:00:00 GMT+0700 (中南半島時間)"
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    return formatIndonesianDate(parsed);
+  }
+
+  return str;
+}
+
 
 export function formatDDMMYYYY(date: Date = new Date()): string {
   const day = String(date.getDate()).padStart(2, '0');
@@ -196,7 +270,7 @@ export function generateWhatsAppReport(report: CombinedShiftReport): string {
     parts.push('Nama petugas :');
     parts.push(officersStr || '-');
     parts.push('Tanggal :');
-    parts.push(w.inspectionDate || report.displayDate || formatIndonesianDate());
+    parts.push(normalizeIndonesianDate(w.inspectionDate || report.displayDate));
     parts.push('Jam Inspeksi :');
     parts.push(w.inspectionTime || formatIndonesianTime());
 
@@ -315,7 +389,7 @@ export function generateWhatsAppReport(report: CombinedShiftReport): string {
     parts.push('Nama Petugas :');
     parts.push(officersStr || '-');
     parts.push('Tanggal :');
-    parts.push(r.inspectionDate || report.displayDate || formatIndonesianDate());
+    parts.push(normalizeIndonesianDate(r.inspectionDate || report.displayDate));
     parts.push('Jam Inspeksi :');
     parts.push(r.inspectionTime || formatIndonesianTime());
 

@@ -16,7 +16,11 @@ import {
   extractSpreadsheetId,
   ActiveSpreadsheetInfo,
 } from './googleSheets';
-import { formatIndonesianDate, formatIndonesianTime } from '../utils/formatters';
+import {
+  formatIndonesianDate,
+  formatIndonesianTime,
+  normalizeIndonesianDate,
+} from '../utils/formatters';
 
 export interface SheetReadResult {
   success: boolean;
@@ -590,8 +594,7 @@ export function buildReportsFromRowArrays(
   let wapres: TimWapresReport | null = null;
   if (isWapresSubmitted) {
     const officers = parseOfficersFromCell(acoTmRow[1] || ups30Row[1]);
-    const inspectionDate =
-      String(acoTmRow[2] || ups30Row[2] || formatIndonesianDate()).trim();
+    const inspectionDate = normalizeIndonesianDate(acoTmRow[2] || ups30Row[2]);
     let inspectionTime = String(acoTmRow[3] || ups30Row[3] || formatIndonesianTime()).trim();
     if (!inspectionTime.toUpperCase().includes('WIB')) {
       inspectionTime = `${inspectionTime} WIB`;
@@ -612,8 +615,7 @@ export function buildReportsFromRowArrays(
   let rumdin: TimRumdinReport | null = null;
   if (isRumdinSubmitted) {
     const officers = parseOfficersFromCell(acoDipoRow[1] || acoSt12Row[1] || ups40DRow[1]);
-    const inspectionDate =
-      String(acoDipoRow[2] || acoSt12Row[2] || ups40DRow[2] || formatIndonesianDate()).trim();
+    const inspectionDate = normalizeIndonesianDate(acoDipoRow[2] || acoSt12Row[2] || ups40DRow[2]);
     let inspectionTime = String(acoDipoRow[3] || acoSt12Row[3] || ups40DRow[3] || formatIndonesianTime()).trim();
     if (!inspectionTime.toUpperCase().includes('WIB')) {
       inspectionTime = `${inspectionTime} WIB`;

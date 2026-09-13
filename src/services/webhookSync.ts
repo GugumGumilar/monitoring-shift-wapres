@@ -101,7 +101,8 @@ export function buildUpsRowData(
   ups: UPSData,
   keteranganSuffix?: string
 ): string[] {
-  const ket = [ups.keterangan, keteranganSuffix].filter(Boolean).join(' - ') || '-';
+  const suffix = keteranganSuffix?.trim();
+  const ket = [ups.keterangan, suffix].filter(Boolean).join(' - ') || '-';
 
   let hoursVal = ups.backupHours;
   let minutesVal = ups.backupMinutes;
@@ -223,35 +224,12 @@ export function buildAcoST12RowData(rumdinReport: TimRumdinReport) {
   ];
 }
 
-export function buildUpsWapresRowsData(wapresReport: TimWapresReport): string[][] {
-  const officers = wapresReport.officers.filter(Boolean);
-  const officersStr = officers.length > 0 ? officers.map((o) => o.toUpperCase()).join(' , ') : '-';
-  const dateFormatted = formatToDDMMYYYY(wapresReport.inspectionDate || new Date());
-  let timeFormatted = wapresReport.inspectionTime || 'WIB';
-  if (!timeFormatted.toUpperCase().includes('WIB')) {
-    timeFormatted = `${timeFormatted} WIB`;
-  }
-
-  return [
-    buildUpsRowData(officersStr, dateFormatted, timeFormatted, wapresReport.ups30, 'UPS 30 KVA LT 1'),
-    buildUpsRowData(officersStr, dateFormatted, timeFormatted, wapresReport.ups40, 'UPS 40 KVA LT 2'),
-    buildUpsRowData(officersStr, dateFormatted, timeFormatted, wapresReport.ups60, 'UPS 60 KVA LT 3'),
-  ];
+export function buildUpsWapresRowsData(_wapresReport: TimWapresReport): string[][] {
+  return [];
 }
 
-export function buildUpsRumdinRowsData(rumdinReport: TimRumdinReport): string[][] {
-  const officers = rumdinReport.officers.filter(Boolean);
-  const officersStr = officers.length > 0 ? officers.map((o) => o.toUpperCase()).join(' , ') : '-';
-  const dateFormatted = formatToDDMMYYYY(rumdinReport.inspectionDate || new Date());
-  let timeFormatted = rumdinReport.inspectionTime || 'WIB';
-  if (!timeFormatted.toUpperCase().includes('WIB')) {
-    timeFormatted = `${timeFormatted} WIB`;
-  }
-
-  return [
-    buildUpsRowData(officersStr, dateFormatted, timeFormatted, rumdinReport.ups40Dipo, 'UPS 40 KVA DIPO'),
-    buildUpsRowData(officersStr, dateFormatted, timeFormatted, rumdinReport.ups100ST12, 'UPS 100 KVA ST 12'),
-  ];
+export function buildUpsRumdinRowsData(_rumdinReport: TimRumdinReport): string[][] {
+  return [];
 }
 
 /**

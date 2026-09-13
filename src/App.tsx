@@ -68,8 +68,11 @@ import {
   RotateCcw,
   Database,
   RefreshCw,
+  Lock,
+  AlertTriangle,
 } from 'lucide-react';
 import { fetchShiftDataFromSpreadsheet } from './services/sheetReader';
+import { validateShiftReport } from './utils/reportValidator';
 
 export default function App() {
   // Current real-time shift
@@ -810,9 +813,23 @@ export default function App() {
     }
   };
 
-  const isWapresSubmitted = Boolean(currentReport?.wapres) || sheetStatus.isWapresSubmitted;
-  const isRumdinSubmitted = Boolean(currentReport?.rumdin) || sheetStatus.isRumdinSubmitted;
-  const isBothSubmitted = isWapresSubmitted && isRumdinSubmitted;
+  // Active shift validation (combines sheet data or local form/saved data)
+  const activeCombinedForValidation: CombinedShiftReport = useMemo(() => {
+    const base = currentReport || getOrCreateShiftReport(selectedDateKey, selectedShift);
+    return {
+      ...base,
+      wapres: sheetStatus.wapres || base.wapres || (wapresData.officers[0] ? wapresData : null),
+      rumdin: sheetStatus.rumdin || base.rumdin || (rumdinData.officers[0] ? rumdinData : null),
+    };
+  }, [currentReport, selectedDateKey, selectedShift, sheetStatus.wapres, sheetStatus.rumdin, wapresData, rumdinData]);
+
+  const shiftValidation = useMemo(() => {
+    return validateShiftReport(activeCombinedForValidation);
+  }, [activeCombinedForValidation]);
+
+  const isWapresSubmitted = shiftValidation.wapres.isComplete;
+  const isRumdinSubmitted = shiftValidation.rumdin.isComplete;
+  const isBothSubmitted = shiftValidation.canSendWhatsApp;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-300">
@@ -842,54 +859,80 @@ export default function App() {
               <span className="text-xs text-zinc-400">Status Shift:</span>
 
               {/* Wapres Status Badge */}
-              <button
-                type="button"
-                onClick={() => setSelectedTeam('WAPRES')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  isWapresSubmitted
-                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25'
-                    : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
-                }`}
-              >
-                {isWapresSubmitted ? (
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                ) : (
-                  <AlertCircle className="w-3.5 h-3.5" />
-                )}
-                <span>
-                  Tim Wapres:{' '}
-                  {sheetStatus.isWapresSubmitted
-                    ? `Sudah Submit (Sheets ${sheetStatus.wapres?.inspectionTime || currentReport?.wapres?.inspectionTime || ''})`
-                    : isWapresSubmitted
-                    ? `Sudah Submit (${currentReport?.wapres?.inspectionTime || ''})`
-                    : 'Belum Submit'}
-                </span>
-              </button>
+              {(() => {
+                const hasWapresStarted = Boolean(
+                  activeCombinedForValidation.wapres?.officers?.[0] ||
+                  activeCombinedForValidation.wapres?.acoTM?.penyulangClose ||
+                  activeCombinedForValidation.wapres?.ups30?.loadR ||
+                  activeCombinedForValidation.wapres?.ups40?.loadR ||
+                  activeCombinedForValidation.wapres?.ups60?.loadR
+                );
+                return (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTeam('WAPRES')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                      shiftValidation.wapres.isComplete
+                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25'
+                        : hasWapresStarted
+                        ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
+                        : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
+                    }`}
+                  >
+                    {shiftValidation.wapres.isComplete ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                    )}
+                    <span>
+                      Tim Wapres:{' '}
+                      {shiftValidation.wapres.isComplete
+                        ? `Sudah Selesai (${activeCombinedForValidation.wapres?.inspectionTime || 'Lengkap'})`
+                        : hasWapresStarted
+                        ? `Belum Selesai (${shiftValidation.wapres.detailedMissingText})`
+                        : 'Belum Diisi'}
+                    </span>
+                  </button>
+                );
+              })()}
 
               {/* Rumdin Status Badge */}
-              <button
-                type="button"
-                onClick={() => setSelectedTeam('RUMDIN')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  isRumdinSubmitted
-                    ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25'
-                    : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
-                }`}
-              >
-                {isRumdinSubmitted ? (
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                ) : (
-                  <AlertCircle className="w-3.5 h-3.5" />
-                )}
-                <span>
-                  Tim Rumdin:{' '}
-                  {sheetStatus.isRumdinSubmitted
-                    ? `Sudah Submit (Sheets ${sheetStatus.rumdin?.inspectionTime || currentReport?.rumdin?.inspectionTime || ''})`
-                    : isRumdinSubmitted
-                    ? `Sudah Submit (${currentReport?.rumdin?.inspectionTime || ''})`
-                    : 'Belum Submit'}
-                </span>
-              </button>
+              {(() => {
+                const hasRumdinStarted = Boolean(
+                  activeCombinedForValidation.rumdin?.officers?.[0] ||
+                  activeCombinedForValidation.rumdin?.acoTRDipo?.garduT135Status ||
+                  activeCombinedForValidation.rumdin?.acoTRST12?.garduT93Status ||
+                  activeCombinedForValidation.rumdin?.ups40Dipo?.loadR ||
+                  activeCombinedForValidation.rumdin?.ups100ST12?.loadR
+                );
+                return (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTeam('RUMDIN')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                      shiftValidation.rumdin.isComplete
+                        ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25'
+                        : hasRumdinStarted
+                        ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
+                        : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
+                    }`}
+                  >
+                    {shiftValidation.rumdin.isComplete ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                    ) : (
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                    )}
+                    <span>
+                      Tim Rumdin:{' '}
+                      {shiftValidation.rumdin.isComplete
+                        ? `Sudah Selesai (${activeCombinedForValidation.rumdin?.inspectionTime || 'Lengkap'})`
+                        : hasRumdinStarted
+                        ? `Belum Selesai (${shiftValidation.rumdin.detailedMissingText})`
+                        : 'Belum Diisi'}
+                    </span>
+                  </button>
+                );
+              })()}
 
               {/* Cek Database Sheets Button */}
               <button
@@ -926,13 +969,43 @@ export default function App() {
                   <span>Laporan Siap Kirim WA</span>
                 </button>
               ) : (
-                <div className="text-xs text-amber-400/90 flex items-center gap-1.5">
-                  <Info className="w-3.5 h-3.5" />
-                  <span>Isi formulir atau sinkron database Sheets untuk laporan utuh</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800/90 hover:bg-zinc-800 text-amber-300 border border-amber-500/30 transition-all cursor-pointer"
+                  title="Lihat rincian input yang belum lengkap dan preview format WA"
+                >
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Kirim WA Terkunci (Cek Kekurangan)</span>
+                </button>
               )}
             </div>
           </div>
+
+          {/* Missing input details alert when incomplete */}
+          {!isBothSubmitted && (Boolean(activeCombinedForValidation.wapres?.officers?.[0]) || Boolean(activeCombinedForValidation.rumdin?.officers?.[0]) || sheetStatus.isWapresSubmitted || sheetStatus.isRumdinSubmitted) && (
+            <div className="pt-2 border-t border-zinc-800/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs bg-amber-950/20 px-3 py-2 rounded-lg border border-amber-500/20">
+              <div className="flex items-start sm:items-center gap-2 text-amber-300">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5 sm:mt-0" />
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="font-semibold text-amber-200">Status Belum Selesai:</span>
+                  {!shiftValidation.wapres.isComplete && (
+                    <span className="bg-zinc-900/90 px-2 py-0.5 rounded border border-amber-500/30 text-amber-200">
+                      Wapres: {shiftValidation.wapres.detailedMissingText}
+                    </span>
+                  )}
+                  {!shiftValidation.rumdin.isComplete && (
+                    <span className="bg-zinc-900/90 px-2 py-0.5 rounded border border-amber-500/30 text-amber-200">
+                      Rumdin: {shiftValidation.rumdin.detailedMissingText}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span className="text-[11px] text-zinc-400 shrink-0">
+                Tombol kirim WA terkunci hingga seluruh data lengkap.
+              </span>
+            </div>
+          )}
 
           {/* Database Sheets verification banner if submitted in sheet */}
           {(sheetStatus.isWapresSubmitted || sheetStatus.isRumdinSubmitted) && (

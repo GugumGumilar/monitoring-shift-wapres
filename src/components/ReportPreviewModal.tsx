@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CombinedShiftReport, TimWapresReport, TimRumdinReport } from '../types';
-import { generateWhatsAppReport, formatIndonesianTime } from '../utils/formatters';
+import { generateWhatsAppReport, formatIndonesianTime, normalizeIndonesianDate } from '../utils/formatters';
+import { validateShiftReport } from '../utils/reportValidator';
 import { ActiveSpreadsheetInfo } from '../services/googleSheets';
 import { fetchShiftDataFromSpreadsheet } from '../services/sheetReader';
 import {
@@ -19,6 +20,8 @@ import {
   ExternalLink,
   Database,
   RefreshCw,
+  Lock,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface ReportPreviewModalProps {
@@ -108,13 +111,12 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
     loadDataFromSpreadsheet();
   }, [isOpen, report.dateKey, report.shift, directWebhookUrl, directSheetLink, accessToken, activeSpreadsheet]);
 
-  if (!isOpen) return null;
-
   const activeReport = (dataSource === 'spreadsheet' && sheetReport) ? sheetReport : report;
-  const fullText = generateWhatsAppReport(activeReport);
-  const isWapresComplete = Boolean(activeReport.wapres);
-  const isRumdinComplete = Boolean(activeReport.rumdin);
-  const isBothComplete = isWapresComplete && isRumdinComplete;
+  const validation = useMemo(() => validateShiftReport(activeReport), [activeReport]);
+  const canSendWhatsApp = validation.canSendWhatsApp;
+  const fullText = useMemo(() => generateWhatsAppReport(activeReport), [activeReport]);
+
+  if (!isOpen) return null;
 
   const handleManualRefreshFromSheet = async () => {
     setIsFetchingSheet(true);
@@ -232,7 +234,7 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
                 Format Laporan WhatsApp - Shift {activeReport.shift}
               </h3>
               <p className="text-xs text-zinc-400">
-                Tanggal: <span className="font-semibold text-zinc-200">{activeReport.displayDate}</span>
+                Tanggal: <span className="font-semibold text-zinc-200">{normalizeIndonesianDate(activeReport.displayDate)}</span>
               </p>
             </div>
           </div>
@@ -283,24 +285,42 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                isWapresComplete
+                validation.wapres.isComplete
                   ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                  : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
               }`}
             >
-              {isWapresComplete ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-              Tim Wapres: {isWapresComplete ? `Selesai (${activeReport.wapres?.inspectionTime || '-'})` : 'Belum Submit'}
+              {validation.wapres.isComplete ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+              )}
+              <span>
+                Tim Wapres:{' '}
+                {validation.wapres.isComplete
+                  ? `Selesai Lengkap (${activeReport.wapres?.inspectionTime || '-'})`
+                  : validation.wapres.detailedMissingText}
+              </span>
             </span>
 
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                isRumdinComplete
+                validation.rumdin.isComplete
                   ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
-                  : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                  : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
               }`}
             >
-              {isRumdinComplete ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-              Tim Rumdin: {isRumdinComplete ? `Selesai (${activeReport.rumdin?.inspectionTime || '-'})` : 'Belum Submit'}
+              {validation.rumdin.isComplete ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+              ) : (
+                <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+              )}
+              <span>
+                Tim Rumdin:{' '}
+                {validation.rumdin.isComplete
+                  ? `Selesai Lengkap (${activeReport.rumdin?.inspectionTime || '-'})`
+                  : validation.rumdin.detailedMissingText}
+              </span>
             </span>
           </div>
 
@@ -317,17 +337,46 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
               </button>
             )}
 
-            {isBothComplete ? (
-              <span className="text-xs text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
-                ✅ Siap Kirim (Kedua Tim Lengkap)
+            {canSendWhatsApp ? (
+              <span className="text-xs text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Siap Kirim WA
               </span>
             ) : (
-              <span className="text-xs text-amber-400 font-semibold bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20">
-                ⚠️ Pengisian Tim Belum Lengkap
+              <span className="text-xs text-rose-400 font-semibold bg-rose-500/10 px-2.5 py-1 rounded-md border border-rose-500/20 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5" />
+                Kirim WA Terkunci
               </span>
             )}
           </div>
         </div>
+
+        {/* Warning card when some inputs are not complete */}
+        {!canSendWhatsApp && (
+          <div className="mx-4 sm:mx-5 mt-3 p-3 bg-rose-950/30 border border-rose-500/30 rounded-xl flex flex-col gap-1.5 text-xs animate-in fade-in duration-150">
+            <div className="flex items-center gap-2 text-rose-400 font-bold">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>Status: Belum Selesai (Tombol Kirim WA Belum Bisa Diklik)</span>
+            </div>
+            <p className="text-zinc-300 text-[11px] leading-relaxed">
+              Jika masih ada parameter atau inputan yang belum terisi, laporan tidak dapat dikirim ke WhatsApp. Mohon lengkapi bagian berikut:
+            </p>
+            <div className="space-y-1 pt-1">
+              {!validation.wapres.isComplete && (
+                <div className="flex items-start gap-1.5 text-rose-300">
+                  <span className="font-bold text-rose-200 shrink-0">• Tim Wapres:</span>
+                  <span>{validation.wapres.detailedMissingText}</span>
+                </div>
+              )}
+              {!validation.rumdin.isComplete && (
+                <div className="flex items-start gap-1.5 text-rose-300">
+                  <span className="font-bold text-rose-200 shrink-0">• Tim Rumdin:</span>
+                  <span>{validation.rumdin.detailedMissingText}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Formatted Text Box */}
         <div className="p-4 sm:p-5 overflow-y-auto flex-1 bg-zinc-950">
@@ -386,11 +435,26 @@ export const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({
             type="button"
             id="whatsapp-share-btn"
             onClick={handleSendWhatsApp}
-            disabled={isFetchingSheet}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white shadow-lg shadow-emerald-950 transition-all cursor-pointer disabled:opacity-60"
+            disabled={!canSendWhatsApp || isFetchingSheet}
+            title={
+              !canSendWhatsApp
+                ? `Tombol belum bisa diklik: ${validation.allMissingList.join(' | ')}`
+                : 'Kirim format laporan ke WhatsApp'
+            }
+            className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
+              canSendWhatsApp && !isFetchingSheet
+                ? 'bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white shadow-lg shadow-emerald-950 cursor-pointer'
+                : 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed opacity-75'
+            }`}
           >
-            <Send className="w-4 h-4" />
-            <span>{isFetchingSheet ? 'Mengambil Data Sheets...' : 'Kirim ke WhatsApp'}</span>
+            {canSendWhatsApp ? <Send className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+            <span>
+              {isFetchingSheet
+                ? 'Mengambil Data Sheets...'
+                : canSendWhatsApp
+                ? 'Kirim ke WhatsApp'
+                : 'Kirim WA Belum Bisa Diklik (Belum Selesai)'}
+            </span>
           </button>
         </div>
       </div>
