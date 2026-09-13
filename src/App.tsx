@@ -27,7 +27,7 @@ import { TimRumdinForm } from './components/TimRumdinForm';
 import { ReportPreviewModal } from './components/ReportPreviewModal';
 import { HistoryModal } from './components/HistoryModal';
 import { GoogleSheetsModal } from './components/GoogleSheetsModal';
-import { ShiftHandoverNotification } from './components/ShiftHandoverNotification';
+import { SpreadsheetViewModal } from './components/SpreadsheetViewModal';
 import { ShiftScheduleModal } from './components/ShiftScheduleModal';
 import { User } from 'firebase/auth';
 import { initAuth, googleSignIn, logout, auth, getCachedGoogleUser, getAccessToken } from './services/googleAuth';
@@ -104,7 +104,7 @@ export default function App() {
   }, []);
 
   const isToday = selectedDateKey === getDateKey();
-  const isShiftTimeAllowed = isToday && selectedShift === liveActiveShift;
+  const isShiftTimeAllowed = true;
 
   // Reports state
   const [allReports, setAllReports] = useState<CombinedShiftReport[]>(() => getAllReports());
@@ -131,6 +131,7 @@ export default function App() {
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState<boolean>(false);
   const [isSyncingSheets, setIsSyncingSheets] = useState<boolean>(false);
   const [isShiftScheduleOpen, setIsShiftScheduleOpen] = useState<boolean>(false);
+  const [isSheetTableOpen, setIsSheetTableOpen] = useState<boolean>(false);
 
   const handleUpdateWebhookUrl = (url: string | null) => {
     setDirectWebhookUrl(url);
@@ -996,18 +997,19 @@ export default function App() {
         onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
         isSheetsConnected={Boolean(directWebhookUrl || (currentUser && activeSpreadsheet))}
         onOpenShiftSchedule={() => setIsShiftScheduleOpen(true)}
+        onOpenSheetTable={() => setIsSheetTableOpen(true)}
       />
 
       {/* Workflow Navigation Bar */}
-      <div id="workflow-nav-bar" className="bg-zinc-900/90 border-b border-zinc-800/80 sticky top-0 z-20 backdrop-blur-md shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-semibold overflow-x-auto">
+      <div id="workflow-nav-bar" className="bg-zinc-900/95 border-b border-zinc-800 shadow-xs relative z-10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 flex flex-col md:flex-row md:items-center md:justify-between gap-2.5">
+          <div className="flex items-center gap-1 sm:gap-2 text-xs font-semibold overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none">
             {/* Step 1: Officer Selection */}
             <button
               type="button"
               id="nav-step-officers"
               onClick={() => setCurrentScreen('OFFICER_SELECT')}
-              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 currentScreen === 'OFFICER_SELECT'
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shadow-xs'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
@@ -1016,17 +1018,18 @@ export default function App() {
               <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
                 currentScreen === 'OFFICER_SELECT' ? 'bg-amber-400 text-zinc-950 font-black' : 'bg-zinc-800 text-zinc-400'
               }`}>1</span>
-              <span>1. Pilih Petugas & Tim</span>
+              <span className="hidden sm:inline">1. Pilih Petugas & Tim</span>
+              <span className="sm:hidden">1. Petugas</span>
             </button>
 
-            <span className="text-zinc-700">→</span>
+            <span className="text-zinc-600 text-xs">→</span>
 
             {/* Step 2: Form */}
             <button
               type="button"
               id="nav-step-form"
               onClick={() => setCurrentScreen('FORM')}
-              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 currentScreen === 'FORM'
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold shadow-xs'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
@@ -1035,17 +1038,18 @@ export default function App() {
               <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
                 currentScreen === 'FORM' ? 'bg-emerald-400 text-zinc-950 font-black' : 'bg-zinc-800 text-zinc-400'
               }`}>2</span>
-              <span>2. Form {selectedTeam === 'WAPRES' ? 'Tim Wapres' : 'Tim Rumdin'}</span>
+              <span className="hidden sm:inline">2. Form {selectedTeam === 'WAPRES' ? 'Tim Wapres' : 'Tim Rumdin'}</span>
+              <span className="sm:hidden">2. Form {selectedTeam === 'WAPRES' ? 'Wapres' : 'Rumdin'}</span>
             </button>
 
-            <span className="text-zinc-700">→</span>
+            <span className="text-zinc-600 text-xs">→</span>
 
             {/* Step 3: Dashboard */}
             <button
               type="button"
               id="nav-step-dashboard"
               onClick={() => setCurrentScreen('DASHBOARD')}
-              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 currentScreen === 'DASHBOARD'
                   ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold shadow-xs'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
@@ -1054,11 +1058,12 @@ export default function App() {
               <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
                 currentScreen === 'DASHBOARD' ? 'bg-blue-400 text-zinc-950 font-black' : 'bg-zinc-800 text-zinc-400'
               }`}>3</span>
-              <span>3. Dashboard Shift</span>
+              <span className="hidden sm:inline">3. Dashboard Shift</span>
+              <span className="sm:hidden">3. Dashboard</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2.5 text-xs">
+          <div className="flex items-center justify-between md:justify-end gap-2 text-xs">
             {/* Live Auto-Sync with Google Sheets Pill */}
             <div
               title={autoSyncSheets ? 'Live Sync Google Sheets: Aktif otomatis setiap 20 detik' : 'Live Sync Google Sheets: Nonaktif'}
@@ -1069,9 +1074,9 @@ export default function App() {
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${autoSyncSheets ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
-              <span className="hidden md:inline font-semibold">{autoSyncSheets ? 'Live Sync Sheets:' : 'Sync Sheets:'}</span>
+              <span className="font-semibold">{autoSyncSheets ? 'Live Sync:' : 'Sync:'}</span>
               <span className="font-mono text-[10px] text-zinc-300">
-                {sheetStatus.isChecking ? 'Menyinkronkan...' : sheetStatus.lastChecked ? sheetStatus.lastChecked : 'Siap'}
+                {sheetStatus.isChecking ? 'Sync...' : sheetStatus.lastChecked ? sheetStatus.lastChecked : 'Siap'}
               </span>
               <button
                 type="button"
@@ -1082,13 +1087,6 @@ export default function App() {
               >
                 <RefreshCw className={`w-3 h-3 ${sheetStatus.isChecking ? 'animate-spin text-emerald-400' : ''}`} />
               </button>
-            </div>
-
-            <div className="hidden sm:flex items-center gap-1.5 text-xs">
-              <span className="text-zinc-500">Petugas:</span>
-              <span className="font-bold text-zinc-200 bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">
-                {selectedOfficers.filter(Boolean).join(', ') || 'Belum dipilih'}
-              </span>
             </div>
           </div>
         </div>
@@ -1490,16 +1488,6 @@ export default function App() {
         onManualSyncAll={handleQuickSyncAll}
       />
 
-      {/* Shift Handover Toast Notification */}
-      <ShiftHandoverNotification
-        currentShift={selectedShift}
-        isWapresSubmitted={isWapresSubmitted}
-        isRumdinSubmitted={isRumdinSubmitted}
-        onOpenReport={() => setIsPreviewOpen(true)}
-        onSyncSheets={handleQuickSyncAll}
-        isSheetsConnected={Boolean(directWebhookUrl || (accessToken && activeSpreadsheet))}
-      />
-
       {/* Shift Schedule & Handover Settings Modal */}
       <ShiftScheduleModal
         isOpen={isShiftScheduleOpen}
@@ -1508,6 +1496,19 @@ export default function App() {
         onTriggerTestToast={() => {
           showToast('🔔 Peringatan pergantian shift aktif! Periksa notifikasi visual di sudut layar.', 'info');
         }}
+      />
+
+      {/* Format Official Google Sheets Table Modal */}
+      <SpreadsheetViewModal
+        isOpen={isSheetTableOpen}
+        onClose={() => setIsSheetTableOpen(false)}
+        allReports={allReports}
+        currentWapresData={activeCombinedForValidation.wapres || wapresData}
+        currentRumdinData={activeCombinedForValidation.rumdin || rumdinData}
+        currentDateKey={selectedDateKey}
+        currentShift={selectedShift}
+        directSheetLink={directSheetLink}
+        activeSpreadsheetUrl={activeSpreadsheet?.url || null}
       />
     </div>
   );

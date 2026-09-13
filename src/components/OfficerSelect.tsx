@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { STAFF_LIST, StaffName } from '../types';
-import { Users, Check, AlertCircle } from 'lucide-react';
+import { Users, Check, AlertCircle, Edit3 } from 'lucide-react';
 
 interface OfficerSelectProps {
   selectedOfficers: [string, string];
@@ -16,16 +16,51 @@ export const OfficerSelect: React.FC<OfficerSelectProps> = ({
   disabled = false,
 }) => {
   const [officer1, officer2] = selectedOfficers;
+  const isComplete = Boolean(officer1 && officer2 && officer1 !== officer2);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(isComplete);
 
   const handleSelect1 = (name: string) => {
     onChange([name, officer2]);
+    if (name && officer2 && name !== officer2) {
+      setIsCollapsed(true);
+    }
   };
 
   const handleSelect2 = (name: string) => {
     onChange([officer1, name]);
+    if (officer1 && name && officer1 !== name) {
+      setIsCollapsed(true);
+    }
   };
 
-  const isComplete = Boolean(officer1 && officer2 && officer1 !== officer2);
+  if (isComplete && isCollapsed) {
+    return (
+      <div id={`officer-select-${teamName.toLowerCase().replace(/\s+/g, '-')}`} className="bg-zinc-900/90 border border-emerald-500/40 rounded-xl p-3 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+            <Users className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5" />
+              <span>Petugas {teamName} Terpilih</span>
+            </div>
+            <div className="text-xs sm:text-sm font-bold text-zinc-100 mt-0.5">
+              {officer1} <span className="text-zinc-500">&</span> {officer2}
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(false)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg border border-zinc-700 cursor-pointer self-start sm:self-auto transition-colors"
+        >
+          <Edit3 className="w-3.5 h-3.5 text-zinc-400" />
+          <span>Ubah Petugas</span>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div id={`officer-select-${teamName.toLowerCase().replace(/\s+/g, '-')}`} className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-4 md:p-5 space-y-4 shadow-sm">
@@ -122,11 +157,13 @@ export const OfficerSelect: React.FC<OfficerSelectProps> = ({
                     onChange([officer1, '']);
                   } else if (!officer1) {
                     onChange([name, officer2]);
+                    if (officer2 && name !== officer2) setIsCollapsed(true);
                   } else if (!officer2) {
                     onChange([officer1, name]);
+                    if (officer1 && name !== officer1) setIsCollapsed(true);
                   } else {
-                    // Replace Petugas 2 by default if both full
                     onChange([officer1, name]);
+                    setIsCollapsed(true);
                   }
                 }}
                 className={`text-xs px-2.5 py-1 rounded-md transition-all font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed ${
@@ -143,6 +180,19 @@ export const OfficerSelect: React.FC<OfficerSelectProps> = ({
           })}
         </div>
       </div>
+
+      {isComplete && (
+        <div className="pt-2 border-t border-zinc-800 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>Selesai Memilih Petugas</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -1398,9 +1398,10 @@ export function buildUpsRow(
   dateFormatted: string,
   timeFormatted: string,
   ups: UPSData,
-  keteranganSuffix?: string
+  _keteranganSuffix?: string
 ): string[] {
-  const ket = [ups.keterangan, keteranganSuffix].filter(Boolean).join(' - ') || '-';
+  // Hanya gunakan catatan / keterangan asli, tanpa suffix seperti UPS 30 LT 1 / UPS 60 LT 3
+  const ket = (ups.keterangan || '-').trim() || '-';
 
   // Nilai Jam dan Menit untuk spreadsheet
   let hoursVal = ups.backupHours;
@@ -1720,7 +1721,7 @@ export async function appendWapresUpsRecords(
     report.inspectionDate,
     report.inspectionTime,
     report.ups30,
-    'UPS 30 KVA LT 1',
+    '',
     shift || (report as any)?.shift
   );
 
@@ -1736,7 +1737,7 @@ export async function appendWapresUpsRecords(
     report.inspectionDate,
     report.inspectionTime,
     report.ups40,
-    'UPS 40 KVA LT 2',
+    '',
     shift || (report as any)?.shift
   );
 
@@ -1752,7 +1753,7 @@ export async function appendWapresUpsRecords(
     report.inspectionDate,
     report.inspectionTime,
     report.ups60,
-    'UPS 60 KVA LT 3',
+    '',
     shift || (report as any)?.shift
   );
 
@@ -1780,7 +1781,7 @@ export async function appendSingleUps30Wapres(
     report.inspectionDate,
     report.inspectionTime,
     report.ups30,
-    'UPS 30 KVA LT 1',
+    '',
     shift || (report as any)?.shift
   );
 }
@@ -1803,7 +1804,7 @@ export async function appendSingleUps40Wapres(
     report.inspectionDate,
     report.inspectionTime,
     report.ups40,
-    'UPS 40 KVA LT 2',
+    '',
     shift || (report as any)?.shift
   );
 }
@@ -1826,7 +1827,7 @@ export async function appendSingleUps60Wapres(
     report.inspectionDate,
     report.inspectionTime,
     report.ups60,
-    'UPS 60 KVA LT 3',
+    '',
     shift || (report as any)?.shift
   );
 }
@@ -1849,7 +1850,7 @@ export async function appendSingleUps40Dipo(
     report.inspectionDate,
     report.inspectionTime,
     report.ups40Dipo,
-    'UPS 40 KVA DIPO',
+    '',
     shift || (report as any)?.shift
   );
 }
@@ -1872,7 +1873,7 @@ export async function appendSingleUps100ST12(
     report.inspectionDate,
     report.inspectionTime,
     report.ups100ST12,
-    'UPS 100 KVA ST 12',
+    '',
     shift || (report as any)?.shift
   );
 }

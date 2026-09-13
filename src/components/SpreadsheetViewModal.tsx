@@ -37,6 +37,17 @@ type TabType =
   | 'UPS_40_DIPO'
   | 'UPS_100';
 
+function cleanUpsKeterangan(raw?: string): string {
+  if (!raw) return '-';
+  let cleaned = raw
+    .replace(/\s*-\s*UPS\s*\d+\s*(?:KVA)?\s*(?:LT\s*\d+|DIPO|ST\s*12)?/gi, '')
+    .replace(/^UPS\s*\d+\s*(?:KVA)?\s*(?:LT\s*\d+|DIPO|ST\s*12)?$/gi, '')
+    .trim();
+  if (cleaned.startsWith('-')) cleaned = cleaned.replace(/^-\s*/, '').trim();
+  if (cleaned.endsWith('-')) cleaned = cleaned.replace(/\s*-$/, '').trim();
+  return cleaned || '-';
+}
+
 export const SpreadsheetViewModal: React.FC<SpreadsheetViewModalProps> = ({
   isOpen,
   onClose,
@@ -513,7 +524,7 @@ export const SpreadsheetViewModal: React.FC<SpreadsheetViewModalProps> = ({
                       <th rowSpan={3} className="border border-black px-2 py-1.5 w-20">TEMPERATUR UPS</th>
                       <th rowSpan={3} className="border border-black px-2 py-1.5 w-16">ALARM UPS</th>
                       <th colSpan={2} className="border border-black px-2 py-1.5">BACK UP TIME UPS</th>
-                      <th rowSpan={3} className="border border-black px-3 py-2 w-36">KETERANGAN & LOKASI</th>
+                      <th rowSpan={3} className="border border-black px-3 py-2 w-36">KETERANGAN</th>
                     </tr>
 
                     {/* Header Row 2 */}
@@ -657,7 +668,7 @@ export const SpreadsheetViewModal: React.FC<SpreadsheetViewModalProps> = ({
 
                             {/* Col R: Keterangan */}
                             <td className="border border-black px-1.5 py-0.5 text-[10px] align-middle">
-                              {upsObj?.keterangan || '-'}
+                              {cleanUpsKeterangan(upsObj?.keterangan)}
                             </td>
                           </tr>
                         );

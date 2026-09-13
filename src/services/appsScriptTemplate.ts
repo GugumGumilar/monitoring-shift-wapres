@@ -725,7 +725,7 @@ function setupUpsSheetLayout(ss, sheetName) {
     var headerRow1 = [
       "NO", "NAMA PETUGAS", "TANGGAL/\\nBULAN/\\nTAHUN", "JAM\\nINSPEKSI",
       sec.bebanTitle, "", "", "", "", "", "", "", "",
-      "TEMPERAT\\nUR UPS", "ALARM\\nUPS", "BACK UP TIME UPS", "", "KETERANGAN & LOKASI"
+      "TEMPERAT\\nUR UPS", "ALARM\\nUPS", "BACK UP TIME UPS", "", "KETERANGAN"
     ];
 
     var headerRow2 = [
