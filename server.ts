@@ -6,6 +6,7 @@ import {
   serverParseGviz,
   serverParseFullSheets,
   serverParseRowRanges,
+  serverParseAllHistory,
 } from "./server/sheetParser";
 
 async function startServer() {
@@ -132,6 +133,43 @@ async function startServer() {
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Shift history read endpoint directly from spreadsheet database
+  app.post("/api/sheets/read-history", async (req, res) => {
+    try {
+      const { spreadsheetId, sheetLink, year, month } = req.body;
+      const sheetId = spreadsheetId || (sheetLink ? extractIdFromUrl(sheetLink) : null);
+
+      if (!sheetId) {
+        return res.status(400).json({ success: false, message: 'ID Spreadsheet / Link belum disediakan.' });
+      }
+
+      const gvizCetak = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=LAPORAN_CETAK`;
+      const gvizUps = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=LAPORAN_CETAK_UPS`;
+
+      const [rCetak, rUps] = await Promise.all([
+        fetch(gvizCetak).then((r) => (r.ok ? r.text() : '')).catch(() => ''),
+        fetch(gvizUps).then((r) => (r.ok ? r.text() : '')).catch(() => ''),
+      ]);
+
+      const rowsCetak = serverParseGviz(rCetak);
+      const rowsUps = serverParseGviz(rUps);
+
+      if (rowsCetak.length === 0 && rowsUps.length === 0) {
+        return res.json({ success: false, reports: [], message: 'Tab LAPORAN_CETAK / LAPORAN_CETAK_UPS tidak dapat dibaca atau kosong.' });
+      }
+
+      const reports = serverParseAllHistory(rowsCetak, rowsUps, year, month);
+      return res.json({
+        success: true,
+        count: reports.length,
+        reports,
+        fetchedAt: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message, reports: [] });
     }
   });
 

@@ -101,16 +101,89 @@ export function serverBuildReports(
   dateKey: string,
   shift: string
 ) {
-  const isWapresTmFilled = isRowFilled(acoTmRow);
-  const isWapresUpsFilled = isRowFilled(ups30Row) || isRowFilled(ups40WRow) || isRowFilled(ups60WRow);
-  const isWapresSubmitted = isWapresTmFilled || isWapresUpsFilled;
+  // Tim Wapres checks: ACO TM, UPS 30, UPS 40, UPS 60
+  const isAcoTmFilled = isRowFilled(acoTmRow);
+  const isUps30Filled = isRowFilled(ups30Row);
+  const isUps40WFilled = isRowFilled(ups40WRow);
+  const isUps60WFilled = isRowFilled(ups60WRow);
 
-  const isRumdinAcoFilled = isRowFilled(acoDipoRow) || isRowFilled(acoSt12Row);
-  const isRumdinUpsFilled = isRowFilled(ups40DRow) || isRowFilled(ups100SRow);
-  const isRumdinSubmitted = isRumdinAcoFilled || isRumdinUpsFilled;
+  const wapresFilledItems: string[] = [];
+  const wapresEmptyItems: string[] = [];
+  if (isAcoTmFilled) wapresFilledItems.push('ACO TM D 126');
+  else wapresEmptyItems.push('ACO TM D 126');
+
+  if (isUps30Filled) wapresFilledItems.push('UPS 30 KVA');
+  else wapresEmptyItems.push('UPS 30 KVA');
+
+  if (isUps40WFilled) wapresFilledItems.push('UPS 40 KVA');
+  else wapresEmptyItems.push('UPS 40 KVA');
+
+  if (isUps60WFilled) wapresFilledItems.push('UPS 60 KVA');
+  else wapresEmptyItems.push('UPS 60 KVA');
+
+  const isWapresComplete = wapresEmptyItems.length === 0;
+  const isWapresPartial = wapresFilledItems.length > 0 && !isWapresComplete;
+  // Sesuai instruksi: Jika masih ada di sheet yang kosong berarti belum submit
+  const isWapresSubmitted = isWapresComplete;
+
+  // Tim Rumdin checks: ACO TR Dipo, ACO TR ST12, UPS 40 Dipo, UPS 100 ST12
+  const isAcoDipoFilled = isRowFilled(acoDipoRow);
+  const isAcoSt12Filled = isRowFilled(acoSt12Row);
+  const isUps40DFilled = isRowFilled(ups40DRow);
+  const isUps100SFilled = isRowFilled(ups100SRow);
+
+  const rumdinFilledItems: string[] = [];
+  const rumdinEmptyItems: string[] = [];
+  if (isAcoDipoFilled) rumdinFilledItems.push('ACO TR Dipo');
+  else rumdinEmptyItems.push('ACO TR Dipo');
+
+  if (isAcoSt12Filled) rumdinFilledItems.push('ACO TR ST 12');
+  else rumdinEmptyItems.push('ACO TR ST 12');
+
+  if (isUps40DFilled) rumdinFilledItems.push('UPS 40 KVA Dipo');
+  else rumdinEmptyItems.push('UPS 40 KVA Dipo');
+
+  if (isUps100SFilled) rumdinFilledItems.push('UPS 100 KVA ST 12');
+  else rumdinEmptyItems.push('UPS 100 KVA ST 12');
+
+  const isRumdinComplete = rumdinEmptyItems.length === 0;
+  const isRumdinPartial = rumdinFilledItems.length > 0 && !isRumdinComplete;
+  // Sesuai instruksi: Jika masih ada di sheet yang kosong berarti belum submit
+  const isRumdinSubmitted = isRumdinComplete;
+
+  const isBothSubmitted = isWapresSubmitted && isRumdinSubmitted;
+
+  const unsubmittedTeams: ('WAPRES' | 'RUMDIN')[] = [];
+  if (!isWapresSubmitted) unsubmittedTeams.push('WAPRES');
+  if (!isRumdinSubmitted) unsubmittedTeams.push('RUMDIN');
+
+  let instructionMessage = '';
+  if (!isWapresSubmitted && !isRumdinSubmitted) {
+    instructionMessage = 'Data di Google Sheets belum lengkap: Tim Wapres & Tim Rumdin belum submit. Mohon kedua tim segera menginput data shift ini!';
+  } else if (!isWapresSubmitted) {
+    instructionMessage = `Data di Google Sheets belum lengkap: Tim Wapres belum submit (Bagian kosong: ${wapresEmptyItems.join(', ')}). Mohon Tim Wapres segera menginput data!`;
+  } else if (!isRumdinSubmitted) {
+    instructionMessage = `Data di Google Sheets belum lengkap: Tim Rumdin belum submit (Bagian kosong: ${rumdinEmptyItems.join(', ')}). Mohon Tim Rumdin segera menginput data!`;
+  } else {
+    instructionMessage = 'Seluruh data di Google Sheets lengkap terisi (Kedua tim sudah submit).';
+  }
+
+  const missingInfo = {
+    isWapresComplete,
+    isRumdinComplete,
+    isBothComplete: isBothSubmitted,
+    isWapresPartial,
+    isRumdinPartial,
+    wapresEmptyItems,
+    rumdinEmptyItems,
+    wapresFilledItems,
+    rumdinFilledItems,
+    unsubmittedTeams,
+    instructionMessage,
+  };
 
   let wapres = null;
-  if (isWapresSubmitted) {
+  if (wapresFilledItems.length > 0) {
     const officers = parseOfficers(acoTmRow[1] || ups30Row[1]);
     const inspectionDate = String(acoTmRow[2] || ups30Row[2] || dateKey).trim();
     let inspectionTime = String(acoTmRow[3] || ups30Row[3] || 'WIB').trim();
@@ -148,7 +221,7 @@ export function serverBuildReports(
   }
 
   let rumdin = null;
-  if (isRumdinSubmitted) {
+  if (rumdinFilledItems.length > 0) {
     const officers = parseOfficers(acoDipoRow[1] || acoSt12Row[1] || ups40DRow[1]);
     const inspectionDate = String(acoDipoRow[2] || acoSt12Row[2] || ups40DRow[2] || dateKey).trim();
     let inspectionTime = String(acoDipoRow[3] || acoSt12Row[3] || ups40DRow[3] || 'WIB').trim();
@@ -204,8 +277,10 @@ export function serverBuildReports(
   return {
     isWapresSubmitted,
     isRumdinSubmitted,
+    isBothSubmitted,
     wapres,
     rumdin,
+    missingInfo,
   };
 }
 
@@ -272,3 +347,64 @@ export function serverParseRowRanges(
     shift
   );
 }
+
+const MONTH_NAMES_ID = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
+
+const DAY_NAMES_ID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+export function serverParseAllHistory(
+  rowsCetak: any[][],
+  rowsUps: any[][],
+  year?: number,
+  month?: number
+): any[] {
+  const now = new Date();
+  const targetYear = year || now.getFullYear();
+  const targetMonth = month || now.getMonth() + 1; // 1-12
+  const results: any[] = [];
+
+  const shifts = ['PAGI', 'SIANG', 'MALAM'];
+
+  for (let day = 1; day <= 31; day++) {
+    for (let offset = 0; offset < 3; offset++) {
+      const shift = shifts[offset];
+      const dateObj = new Date(targetYear, targetMonth - 1, day);
+      if (dateObj.getMonth() !== targetMonth - 1) continue; // invalid date (e.g. 31 Feb)
+
+      const dateKey = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayName = DAY_NAMES_ID[dateObj.getDay()];
+      const monthName = MONTH_NAMES_ID[targetMonth - 1];
+      const displayDate = `${dayName}, ${day} ${monthName} ${targetYear}`;
+
+      const parsed = serverParseFullSheets(rowsCetak, rowsUps, day, offset, shift, dateKey);
+      if (parsed.isWapresSubmitted || parsed.isRumdinSubmitted) {
+        results.push({
+          id: `${dateKey}_${shift}`,
+          dateKey,
+          displayDate,
+          shift,
+          wapres: parsed.wapres,
+          rumdin: parsed.rumdin,
+          isSubmitted: true,
+          submittedAt: parsed.wapres?.submittedAt || parsed.rumdin?.submittedAt || new Date().toISOString(),
+          source: 'spreadsheet',
+        });
+      }
+    }
+  }
+
+  // Sort descending by dateKey and shift
+  results.sort((a, b) => {
+    if (a.dateKey !== b.dateKey) {
+      return b.dateKey.localeCompare(a.dateKey);
+    }
+    const shiftOrder: Record<string, number> = { MALAM: 3, SIANG: 2, PAGI: 1 };
+    return (shiftOrder[b.shift] || 0) - (shiftOrder[a.shift] || 0);
+  });
+
+  return results;
+}
+

@@ -9,9 +9,9 @@ export interface ShiftInfo {
 }
 
 export const SHIFTS: ShiftInfo[] = [
-  { type: 'PAGI', label: 'Shift Pagi', timeRange: '08.00 - 15.00', startHour: 8, endHour: 15 },
-  { type: 'SIANG', label: 'Shift Siang', timeRange: '15.00 - 22.00', startHour: 15, endHour: 22 },
-  { type: 'MALAM', label: 'Shift Malam', timeRange: '22.00 - 08.00', startHour: 22, endHour: 8 },
+  { type: 'PAGI', label: 'Shift Pagi', timeRange: '08.00 - 14.59', startHour: 8, endHour: 15 },
+  { type: 'SIANG', label: 'Shift Siang', timeRange: '15.00 - 21.59', startHour: 15, endHour: 22 },
+  { type: 'MALAM', label: 'Shift Malam', timeRange: '22.00 - 07.59', startHour: 22, endHour: 8 },
 ];
 
 export const STAFF_LIST = [
@@ -127,4 +127,18 @@ export interface CombinedShiftReport {
 }
 
 export type ShiftReportRecord = CombinedShiftReport;
+
+export interface SheetMissingInfo {
+  isWapresComplete: boolean;
+  isRumdinComplete: boolean;
+  isBothComplete: boolean;
+  isWapresPartial: boolean;
+  isRumdinPartial: boolean;
+  wapresEmptyItems: string[];
+  rumdinEmptyItems: string[];
+  wapresFilledItems: string[];
+  rumdinFilledItems: string[];
+  unsubmittedTeams: ('WAPRES' | 'RUMDIN')[];
+  instructionMessage: string;
+}
 

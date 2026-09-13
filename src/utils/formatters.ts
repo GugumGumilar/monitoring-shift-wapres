@@ -126,11 +126,11 @@ export function getCurrentShift(date: Date = new Date()): ShiftType {
 export function getShiftTimeRange(shift: ShiftType): string {
   switch (shift) {
     case 'PAGI':
-      return '08.00 - 15.00 WIB';
+      return '08.00 - 14.59 WIB';
     case 'SIANG':
-      return '15.00 - 22.00 WIB';
+      return '15.00 - 21.59 WIB';
     case 'MALAM':
-      return '22.00 - 08.00 WIB';
+      return '22.00 - 07.59 WIB';
     default:
       return '';
   }

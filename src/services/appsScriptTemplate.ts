@@ -264,6 +264,22 @@ function getShiftOffset(shift) {
   return 0; // Pagi
 }
 
+// Helper: Cari sheet tanpa sensitif huruf besar/kecil atau spasi/garis bawah
+function findSheetCaseInsensitive(ss, targetName) {
+  if (!ss || !targetName) return null;
+  var direct = ss.getSheetByName(targetName);
+  if (direct) return direct;
+  var targetNorm = String(targetName).toUpperCase().replace(/[\s_]+/g, "");
+  var sheets = ss.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    var sNorm = String(sheets[i].getName() || "").toUpperCase().replace(/[\s_]+/g, "");
+    if (sNorm === targetNorm) {
+      return sheets[i];
+    }
+  }
+  return null;
+}
+
 // ========================================================================
 // MENULIS DATA ACO (TM D 126, ST 12, DIPO)
 // ========================================================================
@@ -272,9 +288,15 @@ function upsertAcoRow(ss, unitName, rowData, inspectionDate, shift, dayOfMonth) 
   var offset = getShiftOffset(shift);
 
   // Lembar Gabungan LAPORAN_CETAK
-  var lapCetak = ss.getSheetByName("LAPORAN_CETAK");
+  var lapCetak = findSheetCaseInsensitive(ss, "LAPORAN_CETAK");
   if (!lapCetak) {
     lapCetak = setupAcoSheetLayout(ss, "LAPORAN_CETAK");
+  }
+  if (lapCetak.getMaxRows() < 320) {
+    lapCetak.insertRowsAfter(lapCetak.getMaxRows(), 320 - lapCetak.getMaxRows());
+  }
+  if (lapCetak.getMaxColumns() < 18) {
+    lapCetak.insertColumnsAfter(lapCetak.getMaxColumns(), 18 - lapCetak.getMaxColumns());
   }
 
   // Tentukan baris awal sesuai spesifikasi resmi:
@@ -292,6 +314,10 @@ function upsertAcoRow(ss, unitName, rowData, inspectionDate, shift, dayOfMonth) 
   var targetRow = baseRow + (d - 1) * 3 + offset;
   var startR = baseRow + (d - 1) * 3;
 
+  if (targetRow > lapCetak.getMaxRows()) {
+    lapCetak.insertRowsAfter(lapCetak.getMaxRows(), targetRow + 10 - lapCetak.getMaxRows());
+  }
+
   writeRowValues(lapCetak, targetRow, startR, d, inspectionDate, offset, rowData, 17);
 
   // Periksa jika ada lembar terpisah (misal 'ACO TM D 126')
@@ -301,10 +327,13 @@ function upsertAcoRow(ss, unitName, rowData, inspectionDate, shift, dayOfMonth) 
   else if (u.indexOf("DIPO") !== -1) individualSheetName = "ACO TR DIPO";
 
   if (individualSheetName) {
-    var indSheet = ss.getSheetByName(individualSheetName);
+    var indSheet = findSheetCaseInsensitive(ss, individualSheetName);
     if (indSheet && indSheet.getName() !== lapCetak.getName()) {
       var indTargetRow = 6 + (d - 1) * 3 + offset;
       var indStartR = 6 + (d - 1) * 3;
+      if (indSheet.getMaxRows() < indTargetRow + 5) {
+        indSheet.insertRowsAfter(indSheet.getMaxRows(), indTargetRow + 10 - indSheet.getMaxRows());
+      }
       writeRowValues(indSheet, indTargetRow, indStartR, d, inspectionDate, offset, rowData, 17);
     }
   }
@@ -318,9 +347,15 @@ function upsertSingleUpsUnit(ss, unitName, rowData, inspectionDate, shift, dayOf
   var offset = getShiftOffset(shift);
 
   // Lembar Gabungan LAPORAN_CETAK_UPS
-  var lapUps = ss.getSheetByName("LAPORAN_CETAK_UPS");
+  var lapUps = findSheetCaseInsensitive(ss, "LAPORAN_CETAK_UPS");
   if (!lapUps) {
     lapUps = setupUpsSheetLayout(ss, "LAPORAN_CETAK_UPS");
+  }
+  if (lapUps.getMaxRows() < 520) {
+    lapUps.insertRowsAfter(lapUps.getMaxRows(), 520 - lapUps.getMaxRows());
+  }
+  if (lapUps.getMaxColumns() < 19) {
+    lapUps.insertColumnsAfter(lapUps.getMaxColumns(), 19 - lapUps.getMaxColumns());
   }
 
   // Tentukan baris awal sesuai spesifikasi resmi:
@@ -346,6 +381,10 @@ function upsertSingleUpsUnit(ss, unitName, rowData, inspectionDate, shift, dayOf
   var targetRow = baseRow + (d - 1) * 3 + offset;
   var startR = baseRow + (d - 1) * 3;
 
+  if (targetRow > lapUps.getMaxRows()) {
+    lapUps.insertRowsAfter(lapUps.getMaxRows(), targetRow + 10 - lapUps.getMaxRows());
+  }
+
   writeRowValues(lapUps, targetRow, startR, d, inspectionDate, offset, rowData, 18);
 
   // Periksa jika ada lembar terpisah (misal 'UPS 30 KVA WAPRES')
@@ -357,10 +396,13 @@ function upsertSingleUpsUnit(ss, unitName, rowData, inspectionDate, shift, dayOf
   else if (u.indexOf("100") !== -1 || u.indexOf("ST12") !== -1) indUpsName = "UPS 100 KVA ST 12";
 
   if (indUpsName) {
-    var indSheet = ss.getSheetByName(indUpsName);
+    var indSheet = findSheetCaseInsensitive(ss, indUpsName);
     if (indSheet && indSheet.getName() !== lapUps.getName()) {
       var indTargetRow = 7 + (d - 1) * 3 + offset;
       var indStartR = 7 + (d - 1) * 3;
+      if (indSheet.getMaxRows() < indTargetRow + 5) {
+        indSheet.insertRowsAfter(indSheet.getMaxRows(), indTargetRow + 10 - indSheet.getMaxRows());
+      }
       writeRowValues(indSheet, indTargetRow, indStartR, d, inspectionDate, offset, rowData, 18);
     }
   }

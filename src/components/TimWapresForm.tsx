@@ -31,6 +31,7 @@ interface TimWapresFormProps {
   isAlreadySubmitted?: boolean;
   user?: User | null;
   activeSpreadsheet?: ActiveSpreadsheetInfo | null;
+  hasSheetsConfigured?: boolean;
   autoSyncEnabled?: boolean;
   onOpenGoogleSheets?: () => void;
   onQuickSyncAcoToSheets?: () => void;
@@ -49,6 +50,7 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
   isAlreadySubmitted = false,
   user = null,
   activeSpreadsheet = null,
+  hasSheetsConfigured = false,
   autoSyncEnabled = true,
   onOpenGoogleSheets,
   onQuickSyncAcoToSheets,
@@ -650,7 +652,7 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
           </p>
         </div>
 
-        {activeSpreadsheet && onQuickSyncWapresUps && (
+        {(activeSpreadsheet || hasSheetsConfigured) && onQuickSyncWapresUps && (
           <button
             type="button"
             onClick={onQuickSyncWapresUps}

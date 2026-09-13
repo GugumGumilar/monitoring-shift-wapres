@@ -829,19 +829,29 @@ export async function ensureSheetTab(
   // Check if there is a general LAPORAN_CETAK tab that user might want to use
   if (tabType === 'acoTM' || tabType === 'acoTRDipo' || tabType === 'acoTRST12') {
     const cetakMatch = existingSheets.find(
-      (s) => s.properties?.title?.toLowerCase() === 'laporan_cetak'
+      (s) => s.properties?.title?.toLowerCase() === 'laporan_cetak' ||
+             s.properties?.title?.toLowerCase() === 'laporan cetak'
     );
     if (cetakMatch) return cetakMatch.properties.title;
   } else {
+    // For any UPS tab type (ups, ups30Wapres, ups40Wapres, ups60Wapres, ups40Dipo, ups100ST12)
+    const cetakUpsMatch = existingSheets.find((s) => {
+      const t = (s.properties?.title || '').toLowerCase().replace(/[\s_]+/g, '');
+      return t.includes('laporancetakups') || t.includes('cetakups');
+    });
+    if (cetakUpsMatch) {
+      return cetakUpsMatch.properties.title;
+    }
+
     const upsMatch = existingSheets.find((s) =>
       s.properties?.title?.toLowerCase().includes('ups')
     );
-    if (upsMatch && tabType === 'ups') {
+    if (upsMatch) {
       return upsMatch.properties.title;
     }
   }
 
-  // If not found, add the sheet tab
+  // If not found, add the sheet tab with adequate rows (min 600 for UPS)
   const addRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
     {
@@ -857,7 +867,7 @@ export async function ensureSheetTab(
               properties: {
                 title: targetTitle,
                 gridProperties: {
-                  rowCount: 150,
+                  rowCount: tabType.startsWith('ups') ? 600 : 350,
                   columnCount: 19,
                   frozenRowCount: tabType.startsWith('ups') ? 6 : 5,
                 },
@@ -1442,7 +1452,65 @@ export async function appendSingleUpsRecord(
   keteranganSuffix?: string,
   shift?: ShiftType | string
 ): Promise<{ success: boolean; rowNumber: number }> {
-  const targetSheet = await ensureSheetTab(accessToken, spreadsheetId, tabType, targetSheetName);
+  // 1. Fetch metadata to check existing sheets
+  let existingSheets: any[] = [];
+  try {
+    const metaRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      existingSheets = meta.sheets || [];
+    }
+  } catch (err) {
+    console.warn('Could not fetch sheet metadata:', err);
+  }
+
+  // Check for combined LAPORAN_CETAK_UPS
+  const combinedUpsSheet = existingSheets.find((s) => {
+    const t = (s.properties?.title || '').toLowerCase().replace(/[\s_]+/g, '');
+    return t.includes('laporancetakups') || t.includes('cetakups');
+  });
+
+  // Check for individual sheet
+  const individualSheet = existingSheets.find(
+    (s) => (s.properties?.title || '').toLowerCase() === (targetSheetName || '').toLowerCase()
+  );
+
+  let targetSheet = targetSheetName;
+  let baseStartRow = 7;
+  let isCombined = false;
+
+  if (combinedUpsSheet && (!individualSheet || targetSheetName.toLowerCase().includes('cetak'))) {
+    targetSheet = combinedUpsSheet.properties.title;
+    isCombined = true;
+  } else if (individualSheet) {
+    targetSheet = individualSheet.properties.title;
+    isCombined = false;
+  } else {
+    targetSheet = await ensureSheetTab(accessToken, spreadsheetId, tabType, targetSheetName);
+    isCombined = targetSheet.toLowerCase().includes('cetak');
+  }
+
+  if (isCombined) {
+    // Definisi 5 Bagian Inspeksi UPS pada LAPORAN_CETAK_UPS:
+    // 1. Wapres UPS 30              -> baris 7
+    // 2. Wapres UPS 40              -> baris 107
+    // 3. Wapres UPS 60              -> baris 207
+    // 4. Rumdin UPS 40 (Dipo)       -> baris 307
+    // 5. Rumdin UPS 100 (ST12)      -> baris 407
+    switch (tabType) {
+      case 'ups30Wapres': baseStartRow = 7; break;
+      case 'ups40Wapres': baseStartRow = 107; break;
+      case 'ups60Wapres': baseStartRow = 207; break;
+      case 'ups40Dipo': baseStartRow = 307; break;
+      case 'ups100ST12': baseStartRow = 407; break;
+      default: baseStartRow = 7; break;
+    }
+  } else {
+    baseStartRow = 7;
+  }
 
   const officersClean = officers.filter(Boolean);
   const officersStr =
@@ -1459,7 +1527,33 @@ export async function appendSingleUpsRecord(
   const dayOfMonth = extractDayOfMonth(inspectionDate || new Date());
   const activeShift = shift || 'PAGI';
   const shiftOffset = getShiftOffset(activeShift);
-  const targetRow = calculateSlotRow(dayOfMonth, activeShift, 7);
+  const targetRow = calculateSlotRow(dayOfMonth, activeShift, baseStartRow);
+
+  // Auto-expand sheet rows if needed so out-of-bounds error never happens
+  const currentSheetObj = existingSheets.find(
+    (s) => (s.properties?.title || '').toLowerCase() === targetSheet.toLowerCase()
+  );
+  if (currentSheetObj && (currentSheetObj.properties?.gridProperties?.rowCount || 0) < targetRow + 10) {
+    const sheetId = currentSheetObj.properties.sheetId;
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        requests: [
+          {
+            appendDimension: {
+              sheetId: sheetId,
+              dimension: 'ROWS',
+              length: Math.max(50, targetRow + 20 - (currentSheetObj.properties?.gridProperties?.rowCount || 0)),
+            },
+          },
+        ],
+      }),
+    }).catch(() => {});
+  }
 
   const noValue = shiftOffset === 0 ? String(dayOfMonth) : '';
 
@@ -1495,6 +1589,32 @@ export async function appendSingleUpsRecord(
     throw new Error(err.error?.message || `Gagal memperbarui baris UPS ke sheet ${targetSheet}.`);
   }
 
+  // Also update individual sheet if both exist and are distinct
+  if (combinedUpsSheet && individualSheet && individualSheet.properties?.sheetId !== combinedUpsSheet.properties?.sheetId) {
+    try {
+      const indTargetRow = calculateSlotRow(dayOfMonth, activeShift, 7);
+      await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
+          individualSheet.properties.title
+        )}!A${indTargetRow}:R${indTargetRow}?valueInputOption=USER_ENTERED`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            range: `${individualSheet.properties.title}!A${indTargetRow}:R${indTargetRow}`,
+            majorDimension: 'ROWS',
+            values: [upsRow],
+          }),
+        }
+      );
+    } catch {
+      // Non-blocking secondary sync
+    }
+  }
+
   return { success: true, rowNumber: targetRow };
 }
 
@@ -1513,7 +1633,7 @@ export async function appendRumdinUpsRecords(
   let report: TimRumdinReport | undefined;
 
   if (typeof targetSheetOrTabs === 'string') {
-    tabs = { ups: targetSheetOrTabs, ups40Dipo: targetSheetOrTabs };
+    tabs = { ups: targetSheetOrTabs, ups40Dipo: targetSheetOrTabs, ups100ST12: targetSheetOrTabs };
     report = rumdinReport;
   } else {
     tabs = targetSheetOrTabs;
@@ -1522,8 +1642,8 @@ export async function appendRumdinUpsRecords(
 
   if (!report) return { success: false, rowsAdded: 0 };
 
-  const tab40Dipo = tabs?.ups40Dipo || 'UPS 40 KVA DIPO';
-  const tab100ST12 = tabs?.ups100ST12 || 'UPS 100 KVA ST 12';
+  const tab40Dipo = tabs?.ups40Dipo || tabs?.ups || 'UPS 40 KVA DIPO';
+  const tab100ST12 = tabs?.ups100ST12 || tabs?.ups || 'UPS 100 KVA ST 12';
 
   // Always update UPS 40 KVA DIPO
   await appendSingleUpsRecord(
@@ -1537,7 +1657,7 @@ export async function appendRumdinUpsRecords(
     report.inspectionDate,
     report.inspectionTime,
     report.ups40Dipo,
-    undefined,
+    'UPS 40 KVA DIPO',
     shift || (report as any)?.shift
   );
 
@@ -1553,7 +1673,7 @@ export async function appendRumdinUpsRecords(
     report.inspectionDate,
     report.inspectionTime,
     report.ups100ST12,
-    undefined,
+    'UPS 100 KVA ST 12',
     shift || (report as any)?.shift
   );
 
@@ -1575,7 +1695,7 @@ export async function appendWapresUpsRecords(
   let report: TimWapresReport | undefined;
 
   if (typeof targetSheetOrTabs === 'string') {
-    tabs = { ups: targetSheetOrTabs, ups30Wapres: targetSheetOrTabs };
+    tabs = { ups: targetSheetOrTabs, ups30Wapres: targetSheetOrTabs, ups40Wapres: targetSheetOrTabs, ups60Wapres: targetSheetOrTabs };
     report = wapresReport;
   } else {
     tabs = targetSheetOrTabs;
@@ -1584,9 +1704,9 @@ export async function appendWapresUpsRecords(
 
   if (!report) return { success: false, rowsAdded: 0 };
 
-  const tab30 = tabs?.ups30Wapres || 'UPS 30 KVA WAPRES';
-  const tab40 = tabs?.ups40Wapres || 'UPS 40 KVA WAPRES';
-  const tab60 = tabs?.ups60Wapres || 'UPS 60 KVA WAPRES';
+  const tab30 = tabs?.ups30Wapres || tabs?.ups || 'UPS 30 KVA WAPRES';
+  const tab40 = tabs?.ups40Wapres || tabs?.ups || 'UPS 40 KVA WAPRES';
+  const tab60 = tabs?.ups60Wapres || tabs?.ups || 'UPS 60 KVA WAPRES';
 
   // 1. UPS 30 KVA Wapres (Lt 1)
   await appendSingleUpsRecord(
@@ -1600,7 +1720,7 @@ export async function appendWapresUpsRecords(
     report.inspectionDate,
     report.inspectionTime,
     report.ups30,
-    undefined,
+    'UPS 30 KVA LT 1',
     shift || (report as any)?.shift
   );
 
@@ -1616,7 +1736,7 @@ export async function appendWapresUpsRecords(
     report.inspectionDate,
     report.inspectionTime,
     report.ups40,
-    undefined,
+    'UPS 40 KVA LT 2',
     shift || (report as any)?.shift
   );
 
@@ -1632,7 +1752,7 @@ export async function appendWapresUpsRecords(
     report.inspectionDate,
     report.inspectionTime,
     report.ups60,
-    undefined,
+    'UPS 60 KVA LT 3',
     shift || (report as any)?.shift
   );
 

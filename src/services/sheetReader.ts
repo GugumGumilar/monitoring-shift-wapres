@@ -8,6 +8,7 @@ import {
   ShiftType,
   CombinedShiftReport,
   ACO_TM_PENYULANG_OPTIONS,
+  SheetMissingInfo,
 } from '../types';
 import {
   formatToDDMMYYYY,
@@ -29,6 +30,7 @@ export interface SheetReadResult {
   isBothSubmitted: boolean;
   wapres: TimWapresReport | null;
   rumdin: TimRumdinReport | null;
+  missingInfo?: SheetMissingInfo;
   source: 'server_proxy' | 'sheets_api' | 'webhook' | 'gviz' | 'none';
   message?: string;
   fetchedAt: string;
@@ -344,16 +346,17 @@ export async function fetchShiftDataFromSpreadsheet(
 
     if (proxyRes.ok) {
       const proxyData = await proxyRes.json();
-      if (proxyData.success && (proxyData.isWapresSubmitted || proxyData.isRumdinSubmitted || proxyData.data)) {
+      if (proxyData.success && (proxyData.isWapresSubmitted || proxyData.isRumdinSubmitted || proxyData.data || proxyData.missingInfo || proxyData.wapres || proxyData.rumdin)) {
         return {
           success: true,
           isWapresSubmitted: Boolean(proxyData.isWapresSubmitted),
           isRumdinSubmitted: Boolean(proxyData.isRumdinSubmitted),
-          isBothSubmitted: Boolean(proxyData.isWapresSubmitted && proxyData.isRumdinSubmitted),
+          isBothSubmitted: Boolean(proxyData.isBothSubmitted || (proxyData.isWapresSubmitted && proxyData.isRumdinSubmitted)),
           wapres: proxyData.wapres || (proxyData.data?.wapres) || null,
           rumdin: proxyData.rumdin || (proxyData.data?.rumdin) || null,
+          missingInfo: proxyData.missingInfo,
           source: 'server_proxy',
-          message: proxyData.message || 'Data berhasil dimuat dari database spreadsheet.',
+          message: proxyData.message || (proxyData.missingInfo ? proxyData.missingInfo.instructionMessage : 'Data berhasil dimuat dari database spreadsheet.'),
           fetchedAt: nowStr,
         };
       }
@@ -384,11 +387,12 @@ export async function fetchShiftDataFromSpreadsheet(
             success: true,
             isWapresSubmitted: Boolean(d.isWapresSubmitted),
             isRumdinSubmitted: Boolean(d.isRumdinSubmitted),
-            isBothSubmitted: Boolean(d.isWapresSubmitted && d.isRumdinSubmitted),
+            isBothSubmitted: Boolean(d.isBothSubmitted || (d.isWapresSubmitted && d.isRumdinSubmitted)),
             wapres: d.wapres || null,
             rumdin: d.rumdin || null,
+            missingInfo: d.missingInfo,
             source: 'webhook',
-            message: 'Data berhasil diambil langsung via Webhook Google Apps Script.',
+            message: d.missingInfo?.instructionMessage || 'Data berhasil diambil langsung via Webhook Google Apps Script.',
             fetchedAt: nowStr,
           };
         }
@@ -582,17 +586,89 @@ export function buildReportsFromRowArrays(
   dateKey: string,
   shift: ShiftType
 ): Omit<SheetReadResult, 'source' | 'fetchedAt'> {
-  const isWapresTmFilled = isRowDataSubmitted(acoTmRow);
-  const isWapresUpsFilled =
-    isRowDataSubmitted(ups30Row) || isRowDataSubmitted(ups40WRow) || isRowDataSubmitted(ups60WRow);
-  const isWapresSubmitted = isWapresTmFilled || isWapresUpsFilled;
+  // Tim Wapres item checks: ACO TM, UPS 30, UPS 40, UPS 60
+  const isAcoTmFilled = isRowDataSubmitted(acoTmRow);
+  const isUps30Filled = isRowDataSubmitted(ups30Row);
+  const isUps40WFilled = isRowDataSubmitted(ups40WRow);
+  const isUps60WFilled = isRowDataSubmitted(ups60WRow);
 
-  const isRumdinAcoFilled = isRowDataSubmitted(acoDipoRow) || isRowDataSubmitted(acoSt12Row);
-  const isRumdinUpsFilled = isRowDataSubmitted(ups40DRow) || isRowDataSubmitted(ups100SRow);
-  const isRumdinSubmitted = isRumdinAcoFilled || isRumdinUpsFilled;
+  const wapresFilledItems: string[] = [];
+  const wapresEmptyItems: string[] = [];
+  if (isAcoTmFilled) wapresFilledItems.push('ACO TM D 126');
+  else wapresEmptyItems.push('ACO TM D 126');
+
+  if (isUps30Filled) wapresFilledItems.push('UPS 30 KVA');
+  else wapresEmptyItems.push('UPS 30 KVA');
+
+  if (isUps40WFilled) wapresFilledItems.push('UPS 40 KVA');
+  else wapresEmptyItems.push('UPS 40 KVA');
+
+  if (isUps60WFilled) wapresFilledItems.push('UPS 60 KVA');
+  else wapresEmptyItems.push('UPS 60 KVA');
+
+  const isWapresComplete = wapresEmptyItems.length === 0;
+  const isWapresPartial = wapresFilledItems.length > 0 && !isWapresComplete;
+  // Sesuai aturan: jika masih ada sheet yang kosong, belum submit
+  const isWapresSubmitted = isWapresComplete;
+
+  // Tim Rumdin item checks: ACO TR Dipo, ACO TR ST12, UPS 40 Dipo, UPS 100 ST12
+  const isAcoDipoFilled = isRowDataSubmitted(acoDipoRow);
+  const isAcoSt12Filled = isRowDataSubmitted(acoSt12Row);
+  const isUps40DFilled = isRowDataSubmitted(ups40DRow);
+  const isUps100SFilled = isRowDataSubmitted(ups100SRow);
+
+  const rumdinFilledItems: string[] = [];
+  const rumdinEmptyItems: string[] = [];
+  if (isAcoDipoFilled) rumdinFilledItems.push('ACO TR Dipo');
+  else rumdinEmptyItems.push('ACO TR Dipo');
+
+  if (isAcoSt12Filled) rumdinFilledItems.push('ACO TR ST 12');
+  else rumdinEmptyItems.push('ACO TR ST 12');
+
+  if (isUps40DFilled) rumdinFilledItems.push('UPS 40 KVA Dipo');
+  else rumdinEmptyItems.push('UPS 40 KVA Dipo');
+
+  if (isUps100SFilled) rumdinFilledItems.push('UPS 100 KVA ST 12');
+  else rumdinEmptyItems.push('UPS 100 KVA ST 12');
+
+  const isRumdinComplete = rumdinEmptyItems.length === 0;
+  const isRumdinPartial = rumdinFilledItems.length > 0 && !isRumdinComplete;
+  // Sesuai aturan: jika masih ada sheet yang kosong, belum submit
+  const isRumdinSubmitted = isRumdinComplete;
+
+  const isBothSubmitted = isWapresSubmitted && isRumdinSubmitted;
+
+  const unsubmittedTeams: ('WAPRES' | 'RUMDIN')[] = [];
+  if (!isWapresSubmitted) unsubmittedTeams.push('WAPRES');
+  if (!isRumdinSubmitted) unsubmittedTeams.push('RUMDIN');
+
+  let instructionMessage = '';
+  if (!isWapresSubmitted && !isRumdinSubmitted) {
+    instructionMessage = 'Data di Google Sheets belum lengkap: Tim Wapres & Tim Rumdin belum submit. Mohon kedua tim segera menginput data shift ini!';
+  } else if (!isWapresSubmitted) {
+    instructionMessage = `Data di Google Sheets belum lengkap: Tim Wapres belum submit (Bagian kosong: ${wapresEmptyItems.join(', ')}). Mohon Tim Wapres segera menginput data!`;
+  } else if (!isRumdinSubmitted) {
+    instructionMessage = `Data di Google Sheets belum lengkap: Tim Rumdin belum submit (Bagian kosong: ${rumdinEmptyItems.join(', ')}). Mohon Tim Rumdin segera menginput data!`;
+  } else {
+    instructionMessage = 'Seluruh data di Google Sheets lengkap terisi (Kedua tim sudah submit).';
+  }
+
+  const missingInfo: SheetMissingInfo = {
+    isWapresComplete,
+    isRumdinComplete,
+    isBothComplete: isBothSubmitted,
+    isWapresPartial,
+    isRumdinPartial,
+    wapresEmptyItems,
+    rumdinEmptyItems,
+    wapresFilledItems,
+    rumdinFilledItems,
+    unsubmittedTeams,
+    instructionMessage,
+  };
 
   let wapres: TimWapresReport | null = null;
-  if (isWapresSubmitted) {
+  if (wapresFilledItems.length > 0) {
     const officers = parseOfficersFromCell(acoTmRow[1] || ups30Row[1]);
     const inspectionDate = normalizeIndonesianDate(acoTmRow[2] || ups30Row[2]);
     let inspectionTime = String(acoTmRow[3] || ups30Row[3] || formatIndonesianTime()).trim();
@@ -613,7 +689,7 @@ export function buildReportsFromRowArrays(
   }
 
   let rumdin: TimRumdinReport | null = null;
-  if (isRumdinSubmitted) {
+  if (rumdinFilledItems.length > 0) {
     const officers = parseOfficersFromCell(acoDipoRow[1] || acoSt12Row[1] || ups40DRow[1]);
     const inspectionDate = normalizeIndonesianDate(acoDipoRow[2] || acoSt12Row[2] || ups40DRow[2]);
     let inspectionTime = String(acoDipoRow[3] || acoSt12Row[3] || ups40DRow[3] || formatIndonesianTime()).trim();
@@ -637,16 +713,11 @@ export function buildReportsFromRowArrays(
     success: true,
     isWapresSubmitted,
     isRumdinSubmitted,
-    isBothSubmitted: isWapresSubmitted && isRumdinSubmitted,
+    isBothSubmitted,
     wapres,
     rumdin,
-    message: isWapresSubmitted && isRumdinSubmitted
-      ? 'Data Tim Wapres & Tim Rumdin ditemukan lengkap di Google Sheets.'
-      : isWapresSubmitted
-      ? 'Data Tim Wapres ditemukan di Google Sheets (Tim Rumdin belum submit).'
-      : isRumdinSubmitted
-      ? 'Data Tim Rumdin ditemukan di Google Sheets (Tim Wapres belum submit).'
-      : 'Belum ada data submit di Google Sheets untuk shift ini.',
+    missingInfo,
+    message: instructionMessage,
   };
 }
 
@@ -664,3 +735,146 @@ export function buildCombinedReportFromSheet(
     updatedAt: new Date().toISOString(),
   };
 }
+
+export interface FetchHistoryOptions {
+  sheetLink?: string | null;
+  spreadsheetId?: string | null;
+  year?: number;
+  month?: number;
+}
+
+export interface SheetHistoryResult {
+  success: boolean;
+  reports: CombinedShiftReport[];
+  count: number;
+  message?: string;
+  source: 'server_proxy' | 'gviz' | 'none';
+}
+
+/**
+ * Reads all submitted shift reports in the spreadsheet for the given month
+ */
+export async function fetchHistoryFromSpreadsheet(
+  options: FetchHistoryOptions
+): Promise<SheetHistoryResult> {
+  const { sheetLink, spreadsheetId, year, month } = options;
+  const sheetId = spreadsheetId || (sheetLink ? extractSpreadsheetId(sheetLink) : null);
+
+  if (!sheetId) {
+    return {
+      success: false,
+      reports: [],
+      count: 0,
+      source: 'none',
+      message: 'ID spreadsheet atau link Google Sheets belum dikonfigurasi.',
+    };
+  }
+
+  // 1. Try server proxy endpoint
+  try {
+    const res = await fetch('/api/sheets/read-history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        spreadsheetId: sheetId,
+        sheetLink,
+        year,
+        month,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.reports)) {
+        return {
+          success: true,
+          reports: data.reports,
+          count: data.reports.length,
+          source: 'server_proxy',
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Proxy history read failed, attempting direct GVIZ:', err);
+  }
+
+  // 2. Fallback: Direct GVIZ
+  try {
+    const gvizCetak = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=LAPORAN_CETAK`;
+    const gvizUps = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=LAPORAN_CETAK_UPS`;
+
+    const [rCetak, rUps] = await Promise.all([
+      fetch(gvizCetak).then((r) => (r.ok ? r.text() : '')).catch(() => ''),
+      fetch(gvizUps).then((r) => (r.ok ? r.text() : '')).catch(() => ''),
+    ]);
+
+    const rowsCetak = parseGvizResponseToRows(rCetak);
+    const rowsUps = parseGvizResponseToRows(rUps);
+
+    if (rowsCetak.length === 0 && rowsUps.length === 0) {
+      return {
+        success: false,
+        reports: [],
+        count: 0,
+        source: 'none',
+        message: 'Gagal memuat data dari spreadsheet via GVIZ.',
+      };
+    }
+
+    const now = new Date();
+    const targetYear = year || now.getFullYear();
+    const targetMonth = month || now.getMonth() + 1;
+    const reports: CombinedShiftReport[] = [];
+    const shifts: ShiftType[] = ['PAGI', 'SIANG', 'MALAM'];
+
+    for (let day = 1; day <= 31; day++) {
+      for (let offset = 0; offset < 3; offset++) {
+        const shift = shifts[offset];
+        const dateObj = new Date(targetYear, targetMonth - 1, day);
+        if (dateObj.getMonth() !== targetMonth - 1) continue;
+
+        const dateKey = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const displayDate = formatIndonesianDate(dateObj);
+
+        const parsed = parseGvizRowsIntoReports(rowsCetak, rowsUps, day, offset, dateKey, shift);
+        if (parsed.isWapresSubmitted || parsed.isRumdinSubmitted) {
+          reports.push({
+            id: `${dateKey}_${shift}`,
+            dateKey,
+            displayDate,
+            shift,
+            wapres: parsed.wapres || undefined,
+            rumdin: parsed.rumdin || undefined,
+            createdAt: parsed.wapres?.submittedAt || parsed.rumdin?.submittedAt || new Date().toISOString(),
+            updatedAt: parsed.wapres?.submittedAt || parsed.rumdin?.submittedAt || new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    // Sort descending
+    reports.sort((a, b) => {
+      if (a.dateKey !== b.dateKey) {
+        return b.dateKey.localeCompare(a.dateKey);
+      }
+      const shiftOrder: Record<ShiftType, number> = { MALAM: 3, SIANG: 2, PAGI: 1 };
+      return (shiftOrder[b.shift] || 0) - (shiftOrder[a.shift] || 0);
+    });
+
+    return {
+      success: true,
+      reports,
+      count: reports.length,
+      source: 'gviz',
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      reports: [],
+      count: 0,
+      source: 'none',
+      message: err.message || 'Gagal membaca history dari spreadsheet.',
+    };
+  }
+}
+

@@ -224,12 +224,35 @@ export function buildAcoST12RowData(rumdinReport: TimRumdinReport) {
   ];
 }
 
-export function buildUpsWapresRowsData(_wapresReport: TimWapresReport): string[][] {
-  return [];
+export function buildUpsWapresRowsData(wapresReport: TimWapresReport): string[][] {
+  const officers = (wapresReport.officers || []).filter(Boolean);
+  const officersStr = officers.length > 0 ? officers.map((o) => o.toUpperCase()).join(' , ') : '-';
+  const dateFormatted = formatToDDMMYYYY(wapresReport.inspectionDate || new Date());
+  let timeFormatted = wapresReport.inspectionTime || 'WIB';
+  if (!timeFormatted.toUpperCase().includes('WIB')) {
+    timeFormatted = `${timeFormatted} WIB`;
+  }
+
+  const row30 = buildUpsRowData(officersStr, dateFormatted, timeFormatted, wapresReport.ups30, 'UPS 30 KVA LT 1');
+  const row40 = buildUpsRowData(officersStr, dateFormatted, timeFormatted, wapresReport.ups40, 'UPS 40 KVA LT 2');
+  const row60 = buildUpsRowData(officersStr, dateFormatted, timeFormatted, wapresReport.ups60, 'UPS 60 KVA LT 3');
+
+  return [row30, row40, row60];
 }
 
-export function buildUpsRumdinRowsData(_rumdinReport: TimRumdinReport): string[][] {
-  return [];
+export function buildUpsRumdinRowsData(rumdinReport: TimRumdinReport): string[][] {
+  const officers = (rumdinReport.officers || []).filter(Boolean);
+  const officersStr = officers.length > 0 ? officers.map((o) => o.toUpperCase()).join(' , ') : '-';
+  const dateFormatted = formatToDDMMYYYY(rumdinReport.inspectionDate || new Date());
+  let timeFormatted = rumdinReport.inspectionTime || 'WIB';
+  if (!timeFormatted.toUpperCase().includes('WIB')) {
+    timeFormatted = `${timeFormatted} WIB`;
+  }
+
+  const row40Dipo = buildUpsRowData(officersStr, dateFormatted, timeFormatted, rumdinReport.ups40Dipo, 'UPS 40 KVA DIPO');
+  const row100ST12 = buildUpsRowData(officersStr, dateFormatted, timeFormatted, rumdinReport.ups100ST12, 'UPS 100 KVA ST 12');
+
+  return [row40Dipo, row100ST12];
 }
 
 /**
@@ -361,7 +384,7 @@ export async function syncUpsWapresViaWebhook(
   const rows = buildUpsWapresRowsData(wapres);
   return sendToWebhook(webhookUrl, {
     action: 'UPS_WAPRES',
-    sheetName: 'UPS 30 KVA WAPRES',
+    sheetName: 'LAPORAN_CETAK_UPS',
     rows,
     inspectionDate: formatToDDMMYYYY(wapres.inspectionDate),
     shift: activeShift,
@@ -379,7 +402,7 @@ export async function syncUpsRumdinViaWebhook(
   const rows = buildUpsRumdinRowsData(rumdin);
   return sendToWebhook(webhookUrl, {
     action: 'UPS_RUMDIN',
-    sheetName: 'UPS 40 KVA DIPO',
+    sheetName: 'LAPORAN_CETAK_UPS',
     rows,
     inspectionDate: formatToDDMMYYYY(rumdin.inspectionDate),
     shift: activeShift,

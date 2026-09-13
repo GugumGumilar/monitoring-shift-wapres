@@ -29,6 +29,7 @@ interface TimRumdinFormProps {
   isAlreadySubmitted?: boolean;
   user?: User | null;
   activeSpreadsheet?: ActiveSpreadsheetInfo | null;
+  hasSheetsConfigured?: boolean;
   autoSyncEnabled?: boolean;
   onOpenGoogleSheets?: () => void;
   onQuickSyncDipo?: () => void;
@@ -49,6 +50,7 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
   isAlreadySubmitted = false,
   user = null,
   activeSpreadsheet = null,
+  hasSheetsConfigured = false,
   autoSyncEnabled = true,
   onOpenGoogleSheets,
   onQuickSyncDipo,
@@ -337,7 +339,7 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
             </div>
           </div>
 
-          {activeSpreadsheet && onQuickSyncDipo && (
+          {(activeSpreadsheet || hasSheetsConfigured) && onQuickSyncDipo && (
             <button
               type="button"
               onClick={onQuickSyncDipo}
@@ -516,7 +518,7 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
             </div>
           </div>
 
-          {activeSpreadsheet && onQuickSyncST12 && (
+          {(activeSpreadsheet || hasSheetsConfigured) && onQuickSyncST12 && (
             <button
               type="button"
               onClick={onQuickSyncST12}
@@ -699,7 +701,7 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
           </p>
         </div>
 
-        {activeSpreadsheet && onQuickSyncRumdinUps && (
+        {(activeSpreadsheet || hasSheetsConfigured) && onQuickSyncRumdinUps && (
           <button
             type="button"
             onClick={onQuickSyncRumdinUps}
@@ -745,7 +747,7 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
             </span>
           )}
 
-          {activeSpreadsheet && (
+          {(activeSpreadsheet || hasSheetsConfigured) && (
             <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30">
               <FileSpreadsheet className="w-3 h-3" />
               <span>{autoSyncEnabled ? 'Auto-Sync Sheets Aktif' : 'Tersambung ke Sheets'}</span>
@@ -754,7 +756,7 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          {activeSpreadsheet && onQuickSyncAllRumdin && (
+          {(activeSpreadsheet || hasSheetsConfigured) && onQuickSyncAllRumdin && (
             <button
               type="button"
               onClick={onQuickSyncAllRumdin}
