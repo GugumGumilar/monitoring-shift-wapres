@@ -170,6 +170,7 @@ export default function App() {
   // UI modals & toast
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(
     null
   );
@@ -738,9 +739,17 @@ export default function App() {
 
   // Submission handlers
   const handleWapresSubmit = async (submittedData: TimWapresReport) => {
+    const wasEditing = isEditMode;
+    setIsEditMode(false);
+
     const updatedReport = submitWapresToShift(selectedDateKey, selectedShift, submittedData);
     setAllReports(getAllReports());
-    showToast(`✅ Laporan Tim Wapres berhasil disimpan pada ${submittedData.inspectionTime}!`);
+
+    if (wasEditing) {
+      showToast(`✅ Koreksi Laporan Tim Wapres berhasil disimpan & sinkronisasi ke arsip spreadsheet!`);
+    } else {
+      showToast(`✅ Laporan Tim Wapres berhasil disimpan pada ${submittedData.inspectionTime}!`);
+    }
 
     // Real-time synchronization to Google Sheets
     if (autoSyncEnabled) {
@@ -791,9 +800,17 @@ export default function App() {
   };
 
   const handleRumdinSubmit = async (submittedData: TimRumdinReport) => {
+    const wasEditing = isEditMode;
+    setIsEditMode(false);
+
     const updatedReport = submitRumdinToShift(selectedDateKey, selectedShift, submittedData);
     setAllReports(getAllReports());
-    showToast(`✅ Laporan Tim Rumdin berhasil disimpan pada ${submittedData.inspectionTime}!`);
+
+    if (wasEditing) {
+      showToast(`✅ Koreksi Laporan Tim Rumdin berhasil disimpan & sinkronisasi ke arsip spreadsheet!`);
+    } else {
+      showToast(`✅ Laporan Tim Rumdin berhasil disimpan pada ${submittedData.inspectionTime}!`);
+    }
 
     // Real-time synchronization to Google Sheets
     if (autoSyncEnabled) {
@@ -832,6 +849,26 @@ export default function App() {
     // Setelah simpan, data tersimpan terpisah per tim secara independen.
     // Otomatis dialihkan ke halaman Dashboard yang menampilkan status shift aktif.
     setCurrentScreen('DASHBOARD');
+  };
+
+  const handleEditReportFromHistory = (report: CombinedShiftReport, team: 'WAPRES' | 'RUMDIN') => {
+    setSelectedDateKey(report.dateKey);
+    setSelectedShift(report.shift);
+    setSelectedTeam(team);
+    setIsEditMode(true);
+
+    if (team === 'WAPRES' && report.wapres) {
+      setWapresData({ ...report.wapres });
+    } else if (team === 'RUMDIN' && report.rumdin) {
+      setRumdinData({ ...report.rumdin });
+    }
+
+    setIsHistoryOpen(false);
+    setCurrentScreen('FORM');
+    showToast(
+      `✏️ Mode Koreksi Aktif: Mengedit Laporan Tim ${team === 'WAPRES' ? 'Wapres' : 'Rumdin'} (${report.displayDate} - Shift ${report.shift})`,
+      'info'
+    );
   };
 
   const handleProceedFromOfficerSelection = (
@@ -985,9 +1022,15 @@ export default function App() {
       {/* App Header */}
       <Header
         selectedShift={selectedShift}
-        onSelectShift={setSelectedShift}
+        onSelectShift={(shift) => {
+          setIsEditMode(false);
+          setSelectedShift(shift);
+        }}
         selectedTeam={selectedTeam}
-        onSelectTeam={setSelectedTeam}
+        onSelectTeam={(team) => {
+          setIsEditMode(false);
+          setSelectedTeam(team);
+        }}
         isWapresSubmitted={isWapresSubmitted}
         isRumdinSubmitted={isRumdinSubmitted}
         onOpenPreview={() => setIsPreviewOpen(true)}
@@ -1031,15 +1074,25 @@ export default function App() {
               onClick={() => setCurrentScreen('FORM')}
               className={`px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 currentScreen === 'FORM'
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold shadow-xs'
+                  ? isEditMode
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shadow-xs'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold shadow-xs'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
               }`}
             >
               <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                currentScreen === 'FORM' ? 'bg-emerald-400 text-zinc-950 font-black' : 'bg-zinc-800 text-zinc-400'
+                currentScreen === 'FORM'
+                  ? isEditMode ? 'bg-amber-400 text-zinc-950 font-black' : 'bg-emerald-400 text-zinc-950 font-black'
+                  : 'bg-zinc-800 text-zinc-400'
               }`}>2</span>
-              <span className="hidden sm:inline">2. Form {selectedTeam === 'WAPRES' ? 'Tim Wapres' : 'Tim Rumdin'}</span>
-              <span className="sm:hidden">2. Form {selectedTeam === 'WAPRES' ? 'Wapres' : 'Rumdin'}</span>
+              <span className="hidden sm:inline">
+                2. Form {selectedTeam === 'WAPRES' ? 'Tim Wapres' : 'Tim Rumdin'}
+                {isEditMode ? ' (Koreksi)' : ''}
+              </span>
+              <span className="sm:hidden">
+                2. Form {selectedTeam === 'WAPRES' ? 'Wapres' : 'Rumdin'}
+                {isEditMode ? ' (Edit)' : ''}
+              </span>
             </button>
 
             <span className="text-zinc-600 text-xs">→</span>
@@ -1350,6 +1403,10 @@ export default function App() {
                 onSubmit={handleWapresSubmit}
                 shiftName={selectedShift}
                 isAlreadySubmitted={isWapresSubmitted}
+                isEditMode={isEditMode}
+                onCancelEdit={() => setIsEditMode(false)}
+                onOpenHistory={() => setIsHistoryOpen(true)}
+                onGoToDashboard={() => setCurrentScreen('DASHBOARD')}
                 user={currentUser}
                 activeSpreadsheet={activeSpreadsheet}
                 hasSheetsConfigured={Boolean(directWebhookUrl || activeSpreadsheet)}
@@ -1372,6 +1429,10 @@ export default function App() {
                 onSubmit={handleRumdinSubmit}
                 shiftName={selectedShift}
                 isAlreadySubmitted={isRumdinSubmitted}
+                isEditMode={isEditMode}
+                onCancelEdit={() => setIsEditMode(false)}
+                onOpenHistory={() => setIsHistoryOpen(true)}
+                onGoToDashboard={() => setCurrentScreen('DASHBOARD')}
                 user={currentUser}
                 activeSpreadsheet={activeSpreadsheet}
                 hasSheetsConfigured={Boolean(directWebhookUrl || activeSpreadsheet)}
@@ -1458,6 +1519,7 @@ export default function App() {
           setIsHistoryOpen(false);
           setIsPreviewOpen(true);
         }}
+        onEditReport={handleEditReportFromHistory}
         onDeleteReport={handleDeleteReport}
         sheetLink={directSheetLink}
         spreadsheetId={activeSpreadsheet?.id || null}

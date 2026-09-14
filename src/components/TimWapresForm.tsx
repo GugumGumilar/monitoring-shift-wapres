@@ -21,6 +21,8 @@ import {
   Users,
   Edit3,
   Zap,
+  History,
+  ArrowRight,
 } from 'lucide-react';
 
 interface TimWapresFormProps {
@@ -29,6 +31,10 @@ interface TimWapresFormProps {
   onSubmit: (data: TimWapresReport) => void;
   shiftName: ShiftType | string;
   isAlreadySubmitted?: boolean;
+  isEditMode?: boolean;
+  onCancelEdit?: () => void;
+  onOpenHistory?: () => void;
+  onGoToDashboard?: () => void;
   user?: User | null;
   activeSpreadsheet?: ActiveSpreadsheetInfo | null;
   hasSheetsConfigured?: boolean;
@@ -48,6 +54,10 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
   onSubmit,
   shiftName,
   isAlreadySubmitted = false,
+  isEditMode = false,
+  onCancelEdit,
+  onOpenHistory,
+  onGoToDashboard,
   user = null,
   activeSpreadsheet = null,
   hasSheetsConfigured = false,
@@ -148,26 +158,185 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                 <span className="inline-flex items-center gap-1.5 text-zinc-200 bg-zinc-800/90 px-2.5 py-0.5 rounded-md border border-zinc-700/80">
                   <Users className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Petugas: <strong className="text-emerald-300 font-semibold">{data.officers[0]} & {data.officers[1]}</strong></span>
-                  <button
-                    type="button"
-                    onClick={() => setIsChangingOfficers(!isChangingOfficers)}
-                    className="ml-1 text-[11px] text-zinc-400 hover:text-emerald-300 underline cursor-pointer"
-                  >
-                    {isChangingOfficers ? 'Tutup' : 'Ubah'}
-                  </button>
+                  {!isAlreadySubmitted && (
+                    <button
+                      type="button"
+                      onClick={() => setIsChangingOfficers(!isChangingOfficers)}
+                      className="ml-1 text-[11px] text-zinc-400 hover:text-emerald-300 underline cursor-pointer"
+                    >
+                      {isChangingOfficers ? 'Tutup' : 'Ubah'}
+                    </button>
+                  )}
                 </span>
               </>
             )}
           </div>
         </div>
 
-        {isAlreadySubmitted && (
+        {isAlreadySubmitted && !isEditMode && (
           <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-2 rounded-lg font-medium">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Telah disubmit ({data.inspectionTime})</span>
+            <Lock className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>Formulir Terkunci ({data.inspectionTime})</span>
           </div>
         )}
       </div>
+
+      {/* JIKA SUDAH DISUBMIT DAN TIDAK DALAM MODE EDIT: TAMPILKAN KUNCI FORM */}
+      {isAlreadySubmitted && !isEditMode ? (
+        <div id="wapres-locked-screen" className="bg-zinc-900 border-2 border-emerald-500/60 rounded-2xl p-5 sm:p-7 shadow-2xl space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-5">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
+                <Lock className="w-7 h-7 text-emerald-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    Formulir Terkunci (Sudah Disubmit)
+                  </span>
+                  <span className="text-xs text-zinc-400 font-semibold">Shift {shiftName}</span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-black text-zinc-100 mt-1">
+                  Laporan Tim Wapres Telah Selesai Disubmit
+                </h3>
+                <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">
+                  Sistem mengunci formulir ini untuk shift yang sama agar petugas tidak melakukan input ulang ganda.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Rincian Ringkas Data Terkirim */}
+          <div className="space-y-3">
+            <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+              Data Tersimpan di Laporan Shift:
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+              <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-1">
+                <div className="text-zinc-500 text-[11px]">Petugas Pelapor:</div>
+                <div className="font-bold text-zinc-200 text-sm">
+                  {data.officers.filter(Boolean).join(' & ') || '-'}
+                </div>
+              </div>
+
+              <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-1">
+                <div className="text-zinc-500 text-[11px]">Waktu Inspeksi:</div>
+                <div className="font-bold text-zinc-200 text-sm">
+                  <span className="font-mono text-emerald-400">{data.inspectionTime || '-'}</span> • {data.inspectionDate || '-'}
+                </div>
+              </div>
+
+              <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-1 sm:col-span-2 md:col-span-1">
+                <div className="text-zinc-500 text-[11px]">ACO TM Gardu D 126:</div>
+                <div className="font-bold text-zinc-200">
+                  CLOSE: <span className="text-emerald-400">{data.acoTM.penyulangClose || '-'}</span>
+                </div>
+                <div className="text-[11px] text-zinc-400">
+                  Tegangan: {data.acoTM.teganganMasukTM || '-'} kV • {data.acoTM.arusBebanTM || '-'} A
+                </div>
+              </div>
+            </div>
+
+            {/* Beban UPS */}
+            <div className="bg-zinc-950/80 p-3.5 rounded-xl border border-zinc-800 space-y-2">
+              <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wide">
+                Beban UPS (Arus Fase R / S / T):
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-xs">
+                <div className="bg-zinc-900/90 p-2.5 rounded-lg border border-zinc-800">
+                  <div className="text-zinc-500 text-[11px]">UPS 30 KVA</div>
+                  <div className="font-mono font-bold text-zinc-200 mt-0.5">
+                    {data.ups30.loadR || '-'}/{data.ups30.loadS || '-'}/{data.ups30.loadT || '-'} A
+                  </div>
+                </div>
+                <div className="bg-zinc-900/90 p-2.5 rounded-lg border border-zinc-800">
+                  <div className="text-zinc-500 text-[11px]">UPS 40 KVA</div>
+                  <div className="font-mono font-bold text-zinc-200 mt-0.5">
+                    {data.ups40.loadR || '-'}/{data.ups40.loadS || '-'}/{data.ups40.loadT || '-'} A
+                  </div>
+                </div>
+                <div className="bg-zinc-900/90 p-2.5 rounded-lg border border-zinc-800">
+                  <div className="text-zinc-500 text-[11px]">UPS 60 KVA</div>
+                  <div className="font-mono font-bold text-zinc-200 mt-0.5">
+                    {data.ups60.loadR || '-'}/{data.ups60.loadS || '-'}/{data.ups60.loadT || '-'} A
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Kotak Petunjuk Koreksi / Edit */}
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-xs text-amber-200 space-y-1.5">
+            <div className="font-bold flex items-center gap-2 text-amber-300">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Ingin Melakukan Koreksi atau Pembaruan Data?</span>
+            </div>
+            <p className="text-zinc-300 leading-relaxed">
+              Buka menu <strong>Riwayat Laporan</strong>, lalu klik tombol <strong>Edit & Update</strong> pada laporan shift ini. Setelah edit disimpan, data di arsip spreadsheet bulanan akan otomatis diperbarui.
+            </p>
+          </div>
+
+          {/* Tombol Aksi */}
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {onOpenHistory && (
+              <button
+                type="button"
+                id="btn-open-history-wapres-locked"
+                onClick={onOpenHistory}
+                className="px-5 py-3 rounded-xl font-extrabold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
+              >
+                <History className="w-4 h-4" />
+                <span>Buka Menu Riwayat untuk Edit & Update</span>
+              </button>
+            )}
+
+            {onGoToDashboard && (
+              <button
+                type="button"
+                id="btn-back-dashboard-wapres-locked"
+                onClick={onGoToDashboard}
+                className="px-4 py-3 rounded-xl font-bold text-xs sm:text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <span>Kembali ke Dashboard Shift</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Mode Edit Banner */}
+          {isEditMode && (
+            <div id="wapres-edit-banner" className="bg-amber-500/15 border-2 border-amber-500/50 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                  <Edit3 className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <div className="font-bold text-amber-300 text-sm flex items-center gap-2">
+                    <span>MODE EDIT & KOREKSI RIWAYAT: TIM WAPRES</span>
+                    <span className="text-[10px] bg-amber-500/30 text-amber-200 px-2 py-0.5 rounded font-black">
+                      Shift {shiftName}
+                    </span>
+                  </div>
+                  <p className="text-zinc-300 mt-0.5">
+                    Lakukan koreksi data yang diperlukan. Setelah disimpan, data di arsip spreadsheet bulanan akan otomatis diperbarui.
+                  </p>
+                </div>
+              </div>
+              {onCancelEdit && (
+                <button
+                  type="button"
+                  onClick={onCancelEdit}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+                >
+                  Batal Edit
+                </button>
+              )}
+            </div>
+          )}
 
       {/* 1. Pemilihan Petugas (Muncul Sebelum Form Muncul) */}
       {!hasOfficers ? (
@@ -691,12 +860,18 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
               }`}
             >
               <ShieldCheck className="w-4 h-4" />
-              {isAlreadySubmitted ? 'Perbarui Laporan Tim Wapres' : 'Simpan Laporan Tim Wapres'}
+              {isEditMode
+                ? 'Simpan Koreksi & Update ke Arsip Spreadsheet'
+                : isAlreadySubmitted
+                ? 'Perbarui Laporan Tim Wapres'
+                : 'Simpan Laporan Tim Wapres'}
             </button>
           </div>
         </div>
       </div>
-      </>
+          </>
+        )}
+        </>
       )}
     </form>
   );

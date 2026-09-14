@@ -26,6 +26,7 @@ import {
   Settings,
   ShieldCheck,
   Eye,
+  XCircle,
 } from 'lucide-react';
 
 interface ShiftDashboardScreenProps {
@@ -222,6 +223,179 @@ export const ShiftDashboardScreen: React.FC<ShiftDashboardScreenProps> = ({
         )}
       </div>
 
+      {/* Indikator Visual Status Tim Shift Berjalan (HIJAU = Sudah Submit, MERAH = Belum Submit) */}
+      <div id="shift-submission-status-indicators" className="bg-zinc-900 border-2 border-zinc-700/80 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-zinc-400" />
+            <h2 className="text-sm font-black uppercase tracking-wider text-zinc-200">
+              Indikator Status Penyerahan Laporan Shift {activeShift}
+            </h2>
+          </div>
+          <div className="text-xs font-semibold">
+            {isBothSubmitted ? (
+              <span className="text-emerald-400 font-bold flex items-center gap-1.5 bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-500/40">
+                <CheckCircle2 className="w-4 h-4" />
+                Semua Tim Selesai Submit ({activeShift})
+              </span>
+            ) : (
+              <span className="text-rose-400 font-bold flex items-center gap-1.5 bg-rose-950/60 px-2.5 py-1 rounded-full border border-rose-500/40">
+                <XCircle className="w-4 h-4" />
+                Laporan Belum Lengkap ({!isWapresSubmitted && !isRumdinSubmitted ? 'Wapres & Rumdin Belum' : !isWapresSubmitted ? 'Wapres Belum' : 'Rumdin Belum'})
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {/* Status Tim Wapres: Hijau jika sudah, Merah jika belum */}
+          <div
+            className={`p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 ${
+              isWapresSubmitted
+                ? 'bg-emerald-950/30 border-emerald-500/80 text-emerald-300 shadow-lg shadow-emerald-950/30'
+                : 'bg-rose-950/30 border-rose-500/80 text-rose-300 shadow-lg shadow-rose-950/30'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${
+                  isWapresSubmitted
+                    ? 'bg-emerald-500 text-zinc-950 border-emerald-400 shadow-sm'
+                    : 'bg-rose-600 text-white border-rose-500 shadow-sm'
+                }`}
+              >
+                {isWapresSubmitted ? (
+                  <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
+                ) : (
+                  <XCircle className="w-6 h-6 stroke-[2.5]" />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-extrabold text-base text-zinc-100">Tim Wapres</span>
+                  <span
+                    className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                      isWapresSubmitted
+                        ? 'bg-emerald-500 text-zinc-950 shadow-xs'
+                        : 'bg-rose-600 text-white shadow-xs'
+                    }`}
+                  >
+                    {isWapresSubmitted ? '✓ SUDAH SUBMIT' : '✕ BELUM SUBMIT'}
+                  </span>
+                </div>
+                <div className="text-xs text-zinc-300 mt-1">
+                  {isWapresSubmitted ? (
+                    <span className="text-emerald-400 font-medium">
+                      Terkunci • Disubmit {wapresData.inspectionTime || '-'} ({wapresData.officers.filter(Boolean).join(' & ') || 'Petugas'})
+                    </span>
+                  ) : (
+                    <span className="text-rose-300 font-medium">
+                      Petugas belum input laporan untuk Shift {activeShift}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="shrink-0">
+              {isWapresSubmitted ? (
+                <button
+                  type="button"
+                  onClick={onOpenHistory}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                  title="Buka menu Riwayat untuk edit & update"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Koreksi</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onGoToForm('WAPRES')}
+                  className="px-3.5 py-2 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-950/40 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <span>Isi Form</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Status Tim Rumdin: Hijau jika sudah, Merah jika belum */}
+          <div
+            className={`p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 ${
+              isRumdinSubmitted
+                ? 'bg-emerald-950/30 border-emerald-500/80 text-emerald-300 shadow-lg shadow-emerald-950/30'
+                : 'bg-rose-950/30 border-rose-500/80 text-rose-300 shadow-lg shadow-rose-950/30'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${
+                  isRumdinSubmitted
+                    ? 'bg-emerald-500 text-zinc-950 border-emerald-400 shadow-sm'
+                    : 'bg-rose-600 text-white border-rose-500 shadow-sm'
+                }`}
+              >
+                {isRumdinSubmitted ? (
+                  <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
+                ) : (
+                  <XCircle className="w-6 h-6 stroke-[2.5]" />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-extrabold text-base text-zinc-100">Tim Rumdin</span>
+                  <span
+                    className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                      isRumdinSubmitted
+                        ? 'bg-emerald-500 text-zinc-950 shadow-xs'
+                        : 'bg-rose-600 text-white shadow-xs'
+                    }`}
+                  >
+                    {isRumdinSubmitted ? '✓ SUDAH SUBMIT' : '✕ BELUM SUBMIT'}
+                  </span>
+                </div>
+                <div className="text-xs text-zinc-300 mt-1">
+                  {isRumdinSubmitted ? (
+                    <span className="text-emerald-400 font-medium">
+                      Terkunci • Disubmit {rumdinData.inspectionTime || '-'} ({rumdinData.officers.filter(Boolean).join(' & ') || 'Petugas'})
+                    </span>
+                  ) : (
+                    <span className="text-rose-300 font-medium">
+                      Petugas belum input laporan untuk Shift {activeShift}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="shrink-0">
+              {isRumdinSubmitted ? (
+                <button
+                  type="button"
+                  onClick={onOpenHistory}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                  title="Buka menu Riwayat untuk edit & update"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Koreksi</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onGoToForm('RUMDIN')}
+                  className="px-3.5 py-2 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-950/40 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <span>Isi Form</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Peringatan & Keterangan Belum Submit Jika Masih Ada Data Kosong */}
       {!isBothSubmitted && (
         <div
@@ -365,17 +539,21 @@ export const ShiftDashboardScreen: React.FC<ShiftDashboardScreenProps> = ({
         {/* Card 1: Tim Wapres */}
         <div
           id="dashboard-wapres-card"
-          className={`bg-zinc-900 border rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between transition-all ${
+          className={`border-2 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between transition-all ${
             isWapresSubmitted
-              ? 'border-emerald-500/50 bg-emerald-950/10 ring-1 ring-emerald-500/20'
-              : 'border-zinc-800'
+              ? 'border-emerald-500/80 bg-emerald-950/20 shadow-emerald-950/20'
+              : 'border-rose-500/70 bg-rose-950/15 shadow-rose-950/20'
           }`}
         >
           <div className="space-y-4">
             {/* Header Tim Wapres */}
             <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                <div className={`p-2.5 rounded-xl border ${
+                  isWapresSubmitted
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                    : 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                }`}>
                   <Zap className="w-5 h-5" />
                 </div>
                 <div>
@@ -386,13 +564,13 @@ export const ShiftDashboardScreen: React.FC<ShiftDashboardScreenProps> = ({
 
               <div className="flex flex-col items-end gap-1">
                 {isWapresSubmitted ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-zinc-950 shadow-md">
+                    <CheckCircle2 className="w-4 h-4 text-zinc-950 stroke-[2.5]" />
                     <span>SUDAH SUBMIT</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                    <Clock className="w-4 h-4" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-rose-600 text-white shadow-md">
+                    <XCircle className="w-4 h-4 text-white stroke-[2.5]" />
                     <span>BELUM SUBMIT</span>
                   </span>
                 )}
@@ -506,45 +684,67 @@ export const ShiftDashboardScreen: React.FC<ShiftDashboardScreenProps> = ({
 
           {/* Action button for Tim Wapres */}
           <div className="mt-5 pt-3 border-t border-zinc-800/80">
-            <button
-              type="button"
-              id="action-wapres-btn"
-              onClick={() => onGoToForm('WAPRES')}
-              className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
-                isWapresSubmitted
-                  ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700'
-                  : 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-amber-500/20'
-              }`}
-            >
-              {isWapresSubmitted ? (
-                <>
-                  <Edit3 className="w-4 h-4" />
-                  <span>Edit / Perbarui Data Tim Wapres</span>
-                </>
-              ) : (
-                <>
-                  <PlusCircle className="w-4 h-4" />
-                  <span>Isi Form Tim Wapres Sekarang</span>
-                </>
-              )}
-            </button>
+            {isWapresSubmitted ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                  <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+                    <Lock className="w-3.5 h-3.5" />
+                    Formulir Terkunci (Shift {activeShift})
+                  </span>
+                  <span className="text-zinc-500">Edit via Menu Riwayat</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={onOpenHistory}
+                    className="w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                    title="Buka menu Riwayat untuk koreksi data & perbarui ke spreadsheet"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Edit via Riwayat</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onGoToForm('WAPRES')}
+                    className="w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Lihat Form</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                id="action-wapres-btn"
+                onClick={() => onGoToForm('WAPRES')}
+                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-950/40 transition-all cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Isi Form Tim Wapres Sekarang</span>
+              </button>
+            )}
           </div>
         </div>
 
         {/* Card 2: Tim Rumdin */}
         <div
           id="dashboard-rumdin-card"
-          className={`bg-zinc-900 border rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between transition-all ${
+          className={`border-2 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between transition-all ${
             isRumdinSubmitted
-              ? 'border-emerald-500/50 bg-emerald-950/10 ring-1 ring-emerald-500/20'
-              : 'border-zinc-800'
+              ? 'border-emerald-500/80 bg-emerald-950/20 shadow-emerald-950/20'
+              : 'border-rose-500/70 bg-rose-950/15 shadow-rose-950/20'
           }`}
         >
           <div className="space-y-4">
             {/* Header Tim Rumdin */}
             <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-2.5 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/20">
+                <div className={`p-2.5 rounded-xl border ${
+                  isRumdinSubmitted
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                    : 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                }`}>
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div>
@@ -555,13 +755,13 @@ export const ShiftDashboardScreen: React.FC<ShiftDashboardScreenProps> = ({
 
               <div className="flex flex-col items-end gap-1">
                 {isRumdinSubmitted ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-zinc-950 shadow-md">
+                    <CheckCircle2 className="w-4 h-4 text-zinc-950 stroke-[2.5]" />
                     <span>SUDAH SUBMIT</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                    <Clock className="w-4 h-4" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-rose-600 text-white shadow-md">
+                    <XCircle className="w-4 h-4 text-white stroke-[2.5]" />
                     <span>BELUM SUBMIT</span>
                   </span>
                 )}
@@ -669,28 +869,46 @@ export const ShiftDashboardScreen: React.FC<ShiftDashboardScreenProps> = ({
 
           {/* Action button for Tim Rumdin */}
           <div className="mt-5 pt-3 border-t border-zinc-800/80">
-            <button
-              type="button"
-              id="action-rumdin-btn"
-              onClick={() => onGoToForm('RUMDIN')}
-              className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
-                isRumdinSubmitted
-                  ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700'
-                  : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20'
-              }`}
-            >
-              {isRumdinSubmitted ? (
-                <>
-                  <Edit3 className="w-4 h-4" />
-                  <span>Edit / Perbarui Data Tim Rumdin</span>
-                </>
-              ) : (
-                <>
-                  <PlusCircle className="w-4 h-4" />
-                  <span>Isi Form Tim Rumdin Sekarang</span>
-                </>
-              )}
-            </button>
+            {isRumdinSubmitted ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                  <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+                    <Lock className="w-3.5 h-3.5" />
+                    Formulir Terkunci (Shift {activeShift})
+                  </span>
+                  <span className="text-zinc-500">Edit via Menu Riwayat</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={onOpenHistory}
+                    className="w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                    title="Buka menu Riwayat untuk koreksi data & perbarui ke spreadsheet"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Edit via Riwayat</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onGoToForm('RUMDIN')}
+                    className="w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Lihat Form</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                id="action-rumdin-btn"
+                onClick={() => onGoToForm('RUMDIN')}
+                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-950/40 transition-all cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Isi Form Tim Rumdin Sekarang</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -16,6 +16,7 @@ import {
   FileSpreadsheet,
   Download,
   AlertCircle,
+  Edit3,
 } from 'lucide-react';
 
 interface HistoryModalProps {
@@ -23,6 +24,7 @@ interface HistoryModalProps {
   onClose: () => void;
   reports: CombinedShiftReport[];
   onSelectReport: (report: CombinedShiftReport) => void;
+  onEditReport?: (report: CombinedShiftReport, team: 'WAPRES' | 'RUMDIN') => void;
   onDeleteReport: (id: string) => void;
   sheetLink?: string | null;
   spreadsheetId?: string | null;
@@ -34,6 +36,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
   onClose,
   reports,
   onSelectReport,
+  onEditReport,
   onDeleteReport,
   sheetLink,
   spreadsheetId,
@@ -284,20 +287,35 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <button
                         type="button"
                         onClick={() => onSelectReport(r)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-colors"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-colors cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>Lihat Format</span>
                       </button>
 
+                      {onEditReport && (hasWapres || hasRumdin) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const defaultTeam = hasWapres ? 'WAPRES' : 'RUMDIN';
+                            onEditReport(r, defaultTeam);
+                          }}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-colors shadow-xs cursor-pointer"
+                          title="Koreksi dan perbarui data shift ini ke arsip spreadsheet"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Edit & Update</span>
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => handleSendWA(r)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer"
                       >
                         <Send className="w-3.5 h-3.5" />
                         <span>Kirim WA</span>
@@ -310,7 +328,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                             onDeleteReport(r.id);
                           }
                         }}
-                        className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 transition-colors"
+                        className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 transition-colors cursor-pointer"
                         title="Hapus riwayat lokal"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -321,53 +339,83 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                   {/* Team status */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     {/* Wapres */}
-                    <div className="bg-zinc-950/60 p-2.5 rounded-lg border border-zinc-800/80 flex items-start gap-2">
-                      <div className="mt-0.5">
-                        {hasWapres ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        ) : (
-                          <Clock className="w-4 h-4 text-zinc-500" />
-                        )}
+                    <div className="bg-zinc-950/60 p-2.5 rounded-lg border border-zinc-800/80 flex flex-col justify-between gap-2">
+                      <div className="flex items-start gap-2">
+                        <div className="mt-0.5">
+                          {hasWapres ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-zinc-500" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-zinc-300">Tim Wapres</div>
+                          {hasWapres ? (
+                            <div className="text-zinc-400 text-[11px] mt-0.5">
+                              Petugas:{' '}
+                              <span className="text-zinc-200 font-medium">
+                                {r.wapres?.officers.filter(Boolean).join(', ') || '-'}
+                              </span>{' '}
+                              | Jam: <span className="text-zinc-200 font-mono">{r.wapres?.inspectionTime}</span>
+                            </div>
+                          ) : (
+                            <div className="text-zinc-500 text-[11px] mt-0.5">Belum diisi</div>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-semibold text-zinc-300">Tim Wapres</div>
-                        {hasWapres ? (
-                          <div className="text-zinc-400 text-[11px] mt-0.5">
-                            Petugas:{' '}
-                            <span className="text-zinc-200 font-medium">
-                              {r.wapres?.officers.filter(Boolean).join(', ') || '-'}
-                            </span>{' '}
-                            | Jam: <span className="text-zinc-200 font-mono">{r.wapres?.inspectionTime}</span>
-                          </div>
-                        ) : (
-                          <div className="text-zinc-500 text-[11px] mt-0.5">Belum diisi</div>
-                        )}
-                      </div>
+
+                      {hasWapres && onEditReport && (
+                        <div className="pt-1.5 border-t border-zinc-800/80 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => onEditReport(r, 'WAPRES')}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[11px] font-bold transition-colors cursor-pointer"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            <span>Edit & Update Tim Wapres</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Rumdin */}
-                    <div className="bg-zinc-950/60 p-2.5 rounded-lg border border-zinc-800/80 flex items-start gap-2">
-                      <div className="mt-0.5">
-                        {hasRumdin ? (
-                          <CheckCircle2 className="w-4 h-4 text-blue-400" />
-                        ) : (
-                          <Clock className="w-4 h-4 text-zinc-500" />
-                        )}
+                    <div className="bg-zinc-950/60 p-2.5 rounded-lg border border-zinc-800/80 flex flex-col justify-between gap-2">
+                      <div className="flex items-start gap-2">
+                        <div className="mt-0.5">
+                          {hasRumdin ? (
+                            <CheckCircle2 className="w-4 h-4 text-blue-400" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-zinc-500" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-zinc-300">Tim Rumdin</div>
+                          {hasRumdin ? (
+                            <div className="text-zinc-400 text-[11px] mt-0.5">
+                              Petugas:{' '}
+                              <span className="text-zinc-200 font-medium">
+                                {r.rumdin?.officers.filter(Boolean).join(', ') || '-'}
+                              </span>{' '}
+                              | Jam: <span className="text-zinc-200 font-mono">{r.rumdin?.inspectionTime}</span>
+                            </div>
+                          ) : (
+                            <div className="text-zinc-500 text-[11px] mt-0.5">Belum diisi</div>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-semibold text-zinc-300">Tim Rumdin</div>
-                        {hasRumdin ? (
-                          <div className="text-zinc-400 text-[11px] mt-0.5">
-                            Petugas:{' '}
-                            <span className="text-zinc-200 font-medium">
-                              {r.rumdin?.officers.filter(Boolean).join(', ') || '-'}
-                            </span>{' '}
-                            | Jam: <span className="text-zinc-200 font-mono">{r.rumdin?.inspectionTime}</span>
-                          </div>
-                        ) : (
-                          <div className="text-zinc-500 text-[11px] mt-0.5">Belum diisi</div>
-                        )}
-                      </div>
+
+                      {hasRumdin && onEditReport && (
+                        <div className="pt-1.5 border-t border-zinc-800/80 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => onEditReport(r, 'RUMDIN')}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 text-[11px] font-bold transition-colors cursor-pointer"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            <span>Edit & Update Tim Rumdin</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

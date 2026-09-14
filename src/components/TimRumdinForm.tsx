@@ -19,6 +19,8 @@ import {
   Lock,
   Users,
   Edit3,
+  History,
+  ArrowRight,
 } from 'lucide-react';
 
 interface TimRumdinFormProps {
@@ -27,6 +29,10 @@ interface TimRumdinFormProps {
   onSubmit: (data: TimRumdinReport) => void;
   shiftName: ShiftType | string;
   isAlreadySubmitted?: boolean;
+  isEditMode?: boolean;
+  onCancelEdit?: () => void;
+  onOpenHistory?: () => void;
+  onGoToDashboard?: () => void;
   user?: User | null;
   activeSpreadsheet?: ActiveSpreadsheetInfo | null;
   hasSheetsConfigured?: boolean;
@@ -48,6 +54,10 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
   onSubmit,
   shiftName,
   isAlreadySubmitted = false,
+  isEditMode = false,
+  onCancelEdit,
+  onOpenHistory,
+  onGoToDashboard,
   user = null,
   activeSpreadsheet = null,
   hasSheetsConfigured = false,
@@ -210,13 +220,154 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
           </div>
         </div>
 
-        {isAlreadySubmitted && (
+        {isAlreadySubmitted && !isEditMode && (
           <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs px-3 py-2 rounded-lg font-medium">
-            <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
-            <span>Telah disubmit ({data.inspectionTime})</span>
+            <Lock className="w-4 h-4 text-blue-400 shrink-0" />
+            <span>Formulir Terkunci ({data.inspectionTime})</span>
           </div>
         )}
       </div>
+
+      {/* JIKA SUDAH DISUBMIT DAN BUKAN MODE EDIT: KUNCI FORM */}
+      {isAlreadySubmitted && !isEditMode ? (
+        <div id="rumdin-locked-screen" className="bg-zinc-900 border-2 border-blue-500/60 rounded-2xl p-5 sm:p-7 shadow-2xl space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-5">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="p-3 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/40 shrink-0">
+                <Lock className="w-7 h-7 text-blue-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                    Formulir Terkunci (Sudah Disubmit)
+                  </span>
+                  <span className="text-xs text-zinc-400 font-semibold">Shift {shiftName}</span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-black text-zinc-100 mt-1">
+                  Laporan Tim Rumdin Telah Selesai Disubmit
+                </h3>
+                <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">
+                  Sistem mengunci formulir ini untuk shift yang sama agar petugas tidak melakukan input ulang ganda.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Rincian Data Terkirim */}
+          <div className="space-y-3">
+            <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+              Data Tersimpan di Laporan Shift:
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+              <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-1">
+                <div className="text-zinc-500 text-[11px]">Petugas Pelapor:</div>
+                <div className="font-bold text-zinc-200 text-sm">
+                  {data.officers.filter(Boolean).join(' & ') || '-'}
+                </div>
+              </div>
+
+              <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-1">
+                <div className="text-zinc-500 text-[11px]">Waktu Inspeksi:</div>
+                <div className="font-bold text-zinc-200 text-sm">
+                  <span className="font-mono text-blue-400">{data.inspectionTime || '-'}</span> • {data.inspectionDate || '-'}
+                </div>
+              </div>
+
+              <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-1">
+                <div className="text-zinc-500 text-[11px]">ACO TR Dipo:</div>
+                <div className="font-bold text-zinc-200">
+                  T-135: <span className={data.acoTRDipo.garduT135Status === 'CLOSE' ? 'text-emerald-400' : 'text-zinc-400'}>{data.acoTRDipo.garduT135Status}</span> | T-15N: <span className={data.acoTRDipo.garduT15NStatus === 'CLOSE' ? 'text-emerald-400' : 'text-zinc-400'}>{data.acoTRDipo.garduT15NStatus}</span>
+                </div>
+              </div>
+
+              <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-1">
+                <div className="text-zinc-500 text-[11px]">ACO TR ST 12:</div>
+                <div className="font-bold text-zinc-200">
+                  T-93: <span className={data.acoTRST12.garduT93Status === 'CLOSE' ? 'text-emerald-400' : 'text-zinc-400'}>{data.acoTRST12.garduT93Status}</span> | T-10B: <span className={data.acoTRST12.garduT10BStatus === 'CLOSE' ? 'text-emerald-400' : 'text-zinc-400'}>{data.acoTRST12.garduT10BStatus}</span>
+                </div>
+              </div>
+
+              <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-1 sm:col-span-2">
+                <div className="text-zinc-500 text-[11px]">UPS 40 KVA Dipo & UPS 100 KVA ST12:</div>
+                <div className="font-mono text-zinc-200 text-[11px]">
+                  UPS 40: R={data.ups40Dipo.loadR || '-'}A, S={data.ups40Dipo.loadS || '-'}A, T={data.ups40Dipo.loadT || '-'}A | UPS 100: R={data.ups100ST12.loadR || '-'}A, S={data.ups100ST12.loadS || '-'}A, T={data.ups100ST12.loadT || '-'}A
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Petunjuk Koreksi */}
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-xs text-amber-200 space-y-1.5">
+            <div className="font-bold flex items-center gap-2 text-amber-300">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Ingin Melakukan Koreksi atau Pembaruan Data?</span>
+            </div>
+            <p className="text-zinc-300 leading-relaxed">
+              Buka menu <strong>Riwayat Laporan</strong>, lalu klik tombol <strong>Edit & Update</strong> pada laporan shift ini. Setelah edit disimpan, data di arsip spreadsheet bulanan akan otomatis diperbarui.
+            </p>
+          </div>
+
+          {/* Tombol Aksi */}
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {onOpenHistory && (
+              <button
+                type="button"
+                id="btn-open-history-rumdin-locked"
+                onClick={onOpenHistory}
+                className="px-5 py-3 rounded-xl font-extrabold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-blue-950/40 transition-all cursor-pointer"
+              >
+                <History className="w-4 h-4" />
+                <span>Buka Menu Riwayat untuk Edit & Update</span>
+              </button>
+            )}
+
+            {onGoToDashboard && (
+              <button
+                type="button"
+                id="btn-back-dashboard-rumdin-locked"
+                onClick={onGoToDashboard}
+                className="px-4 py-3 rounded-xl font-bold text-xs sm:text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <span>Kembali ke Dashboard Shift</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Mode Edit Banner */}
+          {isEditMode && (
+            <div id="rumdin-edit-banner" className="bg-amber-500/15 border-2 border-amber-500/50 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                  <Edit3 className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <div className="font-bold text-amber-300 text-sm flex items-center gap-2">
+                    <span>MODE EDIT & KOREKSI RIWAYAT: TIM RUMDIN</span>
+                    <span className="text-[10px] bg-amber-500/30 text-amber-200 px-2 py-0.5 rounded font-black">
+                      Shift {shiftName}
+                    </span>
+                  </div>
+                  <p className="text-zinc-300 mt-0.5">
+                    Lakukan koreksi data yang diperlukan. Setelah disimpan, data di arsip spreadsheet bulanan akan otomatis diperbarui.
+                  </p>
+                </div>
+              </div>
+              {onCancelEdit && (
+                <button
+                  type="button"
+                  onClick={onCancelEdit}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+                >
+                  Batal Edit
+                </button>
+              )}
+            </div>
+          )}
 
       {/* 1. Pemilihan Petugas (Muncul Sebelum Form Muncul) */}
       {!hasOfficers ? (
@@ -752,12 +903,18 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
               }`}
             >
               <ShieldCheck className="w-4 h-4" />
-              {isAlreadySubmitted ? 'Perbarui Laporan Tim Rumdin' : 'Simpan Laporan Tim Rumdin'}
+              {isEditMode
+                ? 'Simpan Koreksi & Update ke Arsip Spreadsheet'
+                : isAlreadySubmitted
+                ? 'Perbarui Laporan Tim Rumdin'
+                : 'Simpan Laporan Tim Rumdin'}
             </button>
           </div>
         </div>
       </div>
-      </>
+          </>
+        )}
+        </>
       )}
     </form>
   );
