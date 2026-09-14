@@ -77,6 +77,7 @@ import { validateShiftReport } from './utils/reportValidator';
 import { OfficerSelectionScreen } from './components/OfficerSelectionScreen';
 import { ShiftDashboardScreen } from './components/ShiftDashboardScreen';
 import { ShiftBriefingScreen } from './components/ShiftBriefingScreen';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
   // Current real-time shift
@@ -1055,7 +1056,7 @@ export default function App() {
   const isBothSubmitted = isWapresSubmitted && isRumdinSubmitted;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-300">
+    <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-300">
       {/* App Header */}
       <Header
         selectedShift={selectedShift}
@@ -1082,25 +1083,25 @@ export default function App() {
       />
 
       {/* Workflow Navigation Bar */}
-      <div id="workflow-nav-bar" className="bg-zinc-900/95 border-b border-zinc-800 shadow-xs relative z-10">
+      <div id="workflow-nav-bar" className="bg-slate-950/70 backdrop-blur-lg border-b border-slate-800/80 shadow-md relative z-10">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 flex flex-col md:flex-row md:items-center md:justify-between gap-2.5">
-          <div className="flex items-center gap-1 sm:gap-2 text-xs font-semibold overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-semibold overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none">
             {/* Step 1: Officer Selection */}
             <button
               type="button"
               id="nav-step-officers"
               onClick={() => setCurrentScreen('OFFICER_SELECT')}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              className={`px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 currentScreen === 'OFFICER_SELECT'
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shadow-xs'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 font-bold shadow-xs shadow-cyan-500/20 glow-cyan'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'
               }`}
             >
-              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                currentScreen === 'OFFICER_SELECT' ? 'bg-amber-400 text-zinc-950 font-black' : 'bg-zinc-800 text-zinc-400'
+              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-mono ${
+                currentScreen === 'OFFICER_SELECT' ? 'bg-cyan-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-400'
               }`}>1</span>
               <span className="hidden sm:inline">
-                1. Pilih Petugas & Tim
+                1. Petugas & Tim
                 {isWapresSubmitted && isRumdinSubmitted ? ' 🔒' : ''}
               </span>
               <span className="sm:hidden">
@@ -1108,39 +1109,39 @@ export default function App() {
               </span>
             </button>
 
-            <span className="text-zinc-600 text-xs">→</span>
+            <span className="text-slate-700 text-xs">→</span>
 
             {/* Step 2: Form */}
             <button
               type="button"
               id="nav-step-form"
               onClick={() => setCurrentScreen('FORM')}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              className={`px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 currentScreen === 'FORM'
                   ? isEditMode
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shadow-xs'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 font-bold shadow-xs glow-amber'
                     : (selectedTeam === 'WAPRES' ? isWapresSubmitted : isRumdinSubmitted)
-                    ? 'bg-zinc-800 text-zinc-300 border border-zinc-700 font-bold shadow-xs'
-                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold shadow-xs'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+                    ? 'bg-slate-800 text-slate-300 border border-slate-700 font-bold shadow-xs'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 font-bold shadow-xs glow-emerald'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'
               }`}
             >
-              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-mono ${
                 currentScreen === 'FORM'
                   ? isEditMode
-                    ? 'bg-amber-400 text-zinc-950 font-black'
+                    ? 'bg-amber-400 text-slate-950 font-black'
                     : (selectedTeam === 'WAPRES' ? isWapresSubmitted : isRumdinSubmitted)
-                    ? 'bg-zinc-700 text-zinc-300 font-black'
-                    : 'bg-emerald-400 text-zinc-950 font-black'
-                  : 'bg-zinc-800 text-zinc-400'
+                    ? 'bg-slate-700 text-slate-300 font-black'
+                    : 'bg-emerald-400 text-slate-950 font-black'
+                  : 'bg-slate-800 text-slate-400'
               }`}>2</span>
               <span className="hidden sm:inline">
                 2. Form {selectedTeam === 'WAPRES' ? 'Tim Wapres' : 'Tim Rumdin'}
                 {isEditMode
-                  ? ' (Edit & Update)'
-                    : (selectedTeam === 'WAPRES' ? isWapresSubmitted : isRumdinSubmitted)
-                    ? ' 🔒 (Terkunci)'
-                    : ''}
+                  ? ' (Edit)'
+                  : (selectedTeam === 'WAPRES' ? isWapresSubmitted : isRumdinSubmitted)
+                  ? ' 🔒'
+                  : ''}
               </span>
               <span className="sm:hidden">
                 2. Form {selectedTeam === 'WAPRES' ? 'Wapres' : 'Rumdin'}
@@ -1152,37 +1153,37 @@ export default function App() {
               </span>
             </button>
 
-            <span className="text-zinc-600 text-xs">→</span>
+            <span className="text-slate-700 text-xs">→</span>
 
             {/* Step 3: Dashboard */}
             <button
               type="button"
               id="nav-step-dashboard"
               onClick={() => setCurrentScreen('DASHBOARD')}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              className={`px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 currentScreen === 'DASHBOARD'
-                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold shadow-xs'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+                  ? 'bg-sky-500/20 text-sky-300 border border-sky-500/50 font-bold shadow-xs glow-cyan'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'
               }`}
             >
-              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                currentScreen === 'DASHBOARD' ? 'bg-blue-400 text-zinc-950 font-black' : 'bg-zinc-800 text-zinc-400'
+              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-mono ${
+                currentScreen === 'DASHBOARD' ? 'bg-sky-400 text-slate-950 font-black' : 'bg-slate-800 text-slate-400'
               }`}>3</span>
               <span className="hidden sm:inline">3. Dashboard Shift</span>
               <span className="sm:hidden">3. Dashboard</span>
             </button>
 
-            <span className="text-zinc-700 text-xs mx-0.5">|</span>
+            <span className="text-slate-800 text-xs mx-0.5">|</span>
 
             {/* Shift Briefing Tab */}
             <button
               type="button"
               id="nav-step-briefing"
               onClick={() => setCurrentScreen('BRIEFING')}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              className={`px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 currentScreen === 'BRIEFING'
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shadow-xs'
-                  : 'text-zinc-400 hover:text-amber-300 hover:bg-zinc-800/60'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 font-bold shadow-xs glow-amber'
+                  : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800/60 border border-transparent'
               }`}
             >
               <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
@@ -1195,15 +1196,15 @@ export default function App() {
             {/* Live Auto-Sync with Google Sheets Pill */}
             <div
               title={autoSyncSheets ? 'Live Sync Google Sheets: Aktif otomatis setiap 20 detik' : 'Live Sync Google Sheets: Nonaktif'}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium transition-all ${
                 autoSyncSheets
                   ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
-                  : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                  : 'bg-slate-800 text-slate-400 border border-slate-700'
               }`}
             >
-              <span className={`w-2 h-2 rounded-full ${autoSyncSheets ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
+              <span className={`w-2 h-2 rounded-full ${autoSyncSheets ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
               <span className="font-semibold">{autoSyncSheets ? 'Live Sync:' : 'Sync:'}</span>
-              <span className="font-mono text-[10px] text-zinc-300">
+              <span className="font-mono text-[10px] text-slate-300">
                 {sheetStatus.isChecking ? 'Sync...' : sheetStatus.lastChecked ? sheetStatus.lastChecked : 'Siap'}
               </span>
               <button
@@ -1220,331 +1221,364 @@ export default function App() {
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* VIEW 1: Halaman Pertama - Pilih Petugas & Deteksi Shift & Pilih Tim */}
-        {currentScreen === 'OFFICER_SELECT' && (
-          <OfficerSelectionScreen
-            currentOfficers={selectedOfficers}
-            selectedTeam={selectedTeam}
-            onSelectOfficers={(offs) => {
-              setSelectedOfficers(offs);
-              try {
-                localStorage.setItem('monitoring_last_officers', JSON.stringify(offs));
-              } catch {}
-            }}
-            onSelectTeam={(team) => setSelectedTeam(team)}
-            onProceedToForm={handleProceedFromOfficerSelection}
-            onGoToDashboard={() => setCurrentScreen('DASHBOARD')}
-            onGoToBriefing={() => setCurrentScreen('BRIEFING')}
-            onEditSubmittedReport={handleEditSubmittedReport}
-            isWapresSubmitted={isWapresSubmitted}
-            isRumdinSubmitted={isRumdinSubmitted}
-          />
-        )}
+      {/* Main Content Area with Smooth Page Transitions */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <AnimatePresence mode="wait">
+          {/* VIEW 1: Halaman Pertama - Pilih Petugas & Deteksi Shift & Pilih Tim */}
+          {currentScreen === 'OFFICER_SELECT' && (
+            <motion.div
+              key="officer-select-view"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              <OfficerSelectionScreen
+                currentOfficers={selectedOfficers}
+                selectedTeam={selectedTeam}
+                onSelectOfficers={(offs) => {
+                  setSelectedOfficers(offs);
+                  try {
+                    localStorage.setItem('monitoring_last_officers', JSON.stringify(offs));
+                  } catch {}
+                }}
+                onSelectTeam={(team) => setSelectedTeam(team)}
+                onProceedToForm={handleProceedFromOfficerSelection}
+                onGoToDashboard={() => setCurrentScreen('DASHBOARD')}
+                onGoToBriefing={() => setCurrentScreen('BRIEFING')}
+                onEditSubmittedReport={handleEditSubmittedReport}
+                isWapresSubmitted={isWapresSubmitted}
+                isRumdinSubmitted={isRumdinSubmitted}
+              />
+            </motion.div>
+          )}
 
-        {/* VIEW 2: Dashboard Status Shift Aktif & Tombol Gabung Laporan */}
-        {currentScreen === 'DASHBOARD' && (
-          <ShiftDashboardScreen
-            currentReport={currentReport}
-            activeShift={selectedShift}
-            wapresData={activeCombinedForValidation.wapres || wapresData}
-            rumdinData={activeCombinedForValidation.rumdin || rumdinData}
-            isWapresSubmitted={isWapresSubmitted}
-            isRumdinSubmitted={isRumdinSubmitted}
-            shiftValidation={shiftValidation}
-            sheetMissingInfo={sheetStatus.missingInfo}
-            onGoToOfficers={() => setCurrentScreen('OFFICER_SELECT')}
-            onGoToForm={(team) => {
-              setSelectedTeam(team);
-              setCurrentScreen('FORM');
-            }}
-            onEditSubmittedReport={handleEditSubmittedReport}
-            onOpenReportPreview={() => setIsPreviewOpen(true)}
-            onOpenHistory={() => setIsHistoryOpen(true)}
-            onOpenSheetsModal={() => setIsSheetsModalOpen(true)}
-            onRefreshSheetStatus={() => checkSpreadsheetSubmission(false)}
-            onGoToBriefing={() => setCurrentScreen('BRIEFING')}
-            isCheckingSheet={sheetStatus.isChecking}
-            sheetStatusError={sheetStatus.error}
-            sourceIndicator={
-              sheetStatus.isWapresSubmitted || sheetStatus.isRumdinSubmitted
-                ? 'Google Sheets'
-                : undefined
-            }
-            lastCheckedTime={sheetStatus.lastChecked}
-            autoSyncEnabled={autoSyncSheets}
-            onToggleAutoSync={() => setAutoSyncSheets((prev) => !prev)}
-            isWapresFromSheet={Boolean(sheetStatus.isWapresSubmitted)}
-            isRumdinFromSheet={Boolean(sheetStatus.isRumdinSubmitted)}
-          />
-        )}
+          {/* VIEW 2: Dashboard Status Shift Aktif & Tombol Gabung Laporan */}
+          {currentScreen === 'DASHBOARD' && (
+            <motion.div
+              key="dashboard-view"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              <ShiftDashboardScreen
+                currentReport={currentReport}
+                activeShift={selectedShift}
+                wapresData={activeCombinedForValidation.wapres || wapresData}
+                rumdinData={activeCombinedForValidation.rumdin || rumdinData}
+                isWapresSubmitted={isWapresSubmitted}
+                isRumdinSubmitted={isRumdinSubmitted}
+                shiftValidation={shiftValidation}
+                sheetMissingInfo={sheetStatus.missingInfo}
+                onGoToOfficers={() => setCurrentScreen('OFFICER_SELECT')}
+                onGoToForm={(team) => {
+                  setSelectedTeam(team);
+                  setCurrentScreen('FORM');
+                }}
+                onEditSubmittedReport={handleEditSubmittedReport}
+                onOpenReportPreview={() => setIsPreviewOpen(true)}
+                onOpenHistory={() => setIsHistoryOpen(true)}
+                onOpenSheetsModal={() => setIsSheetsModalOpen(true)}
+                onRefreshSheetStatus={() => checkSpreadsheetSubmission(false)}
+                onGoToBriefing={() => setCurrentScreen('BRIEFING')}
+                isCheckingSheet={sheetStatus.isChecking}
+                sheetStatusError={sheetStatus.error}
+                sourceIndicator={
+                  sheetStatus.isWapresSubmitted || sheetStatus.isRumdinSubmitted
+                    ? 'Google Sheets'
+                    : undefined
+                }
+                lastCheckedTime={sheetStatus.lastChecked}
+                autoSyncEnabled={autoSyncSheets}
+                onToggleAutoSync={() => setAutoSyncSheets((prev) => !prev)}
+                isWapresFromSheet={Boolean(sheetStatus.isWapresSubmitted)}
+                isRumdinFromSheet={Boolean(sheetStatus.isRumdinSubmitted)}
+              />
+            </motion.div>
+          )}
 
-        {/* VIEW 3: Pengisian Formulir Tim Sesuai Pilihan */}
-        {currentScreen === 'FORM' && (
-          <>
-            {/* Top Return Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setCurrentScreen('OFFICER_SELECT')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg transition-colors cursor-pointer"
-                >
-                  <span>← Ganti Petugas / Tim</span>
-                </button>
-                <div className="text-xs text-zinc-400">
-                  Petugas:{' '}
-                  <span className="font-bold text-zinc-200">
-                    {selectedOfficers.filter(Boolean).join(', ') || 'Belum dipilih'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCurrentScreen('DASHBOARD')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg transition-colors cursor-pointer"
-                >
-                  <span>Lihat Dashboard Shift →</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Status Bar */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-zinc-400">Status Shift:</span>
-
-                  {/* Wapres Status Badge */}
-                  {(() => {
-                    const hasWapresStarted = Boolean(
-                      activeCombinedForValidation.wapres?.officers?.[0] ||
-                      activeCombinedForValidation.wapres?.acoTM?.penyulangClose ||
-                      activeCombinedForValidation.wapres?.ups30?.loadR ||
-                      activeCombinedForValidation.wapres?.ups40?.loadR ||
-                      activeCombinedForValidation.wapres?.ups60?.loadR
-                    );
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedTeam('WAPRES')}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                          shiftValidation.wapres.isComplete
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25'
-                            : hasWapresStarted
-                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
-                            : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
-                        }`}
-                      >
-                        {shiftValidation.wapres.isComplete ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        ) : (
-                          <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
-                        )}
-                        <span>
-                          Tim Wapres:{' '}
-                          {shiftValidation.wapres.isComplete
-                            ? `Sudah Selesai (${activeCombinedForValidation.wapres?.inspectionTime || 'Lengkap'})`
-                            : hasWapresStarted
-                            ? `Belum Selesai (${shiftValidation.wapres.detailedMissingText})`
-                            : 'Belum Diisi'}
-                        </span>
-                      </button>
-                    );
-                  })()}
-
-                  {/* Rumdin Status Badge */}
-                  {(() => {
-                    const hasRumdinStarted = Boolean(
-                      activeCombinedForValidation.rumdin?.officers?.[0] ||
-                      activeCombinedForValidation.rumdin?.acoTRDipo?.garduT135Status ||
-                      activeCombinedForValidation.rumdin?.acoTRST12?.garduT93Status ||
-                      activeCombinedForValidation.rumdin?.ups40Dipo?.loadR ||
-                      activeCombinedForValidation.rumdin?.ups100ST12?.loadR
-                    );
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedTeam('RUMDIN')}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                          shiftValidation.rumdin.isComplete
-                            ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25'
-                            : hasRumdinStarted
-                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
-                            : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:text-zinc-200'
-                        }`}
-                      >
-                        {shiftValidation.rumdin.isComplete ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
-                        ) : (
-                          <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
-                        )}
-                        <span>
-                          Tim Rumdin:{' '}
-                          {shiftValidation.rumdin.isComplete
-                            ? `Sudah Selesai (${activeCombinedForValidation.rumdin?.inspectionTime || 'Lengkap'})`
-                            : hasRumdinStarted
-                            ? `Belum Selesai (${shiftValidation.rumdin.detailedMissingText})`
-                            : 'Belum Diisi'}
-                        </span>
-                      </button>
-                    );
-                  })()}
-
-                  {/* Cek Database Sheets Button */}
+          {/* VIEW 3: Pengisian Formulir Tim Sesuai Pilihan */}
+          {currentScreen === 'FORM' && (
+            <motion.div
+              key="form-view"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="space-y-6"
+            >
+              {/* Top Return Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/70 backdrop-blur-md border border-slate-800 rounded-2xl p-4 shadow-lg">
+                <div className="flex items-center gap-2.5">
                   <button
                     type="button"
-                    onClick={() => checkSpreadsheetSubmission(false)}
-                    disabled={sheetStatus.isChecking}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-full transition-colors cursor-pointer disabled:opacity-50"
-                    title="Periksa database Google Sheets apakah laporan shift ini sudah disubmit"
+                    onClick={() => setCurrentScreen('OFFICER_SELECT')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-xl transition-colors cursor-pointer"
                   >
-                    <RefreshCw className={`w-3 h-3 ${sheetStatus.isChecking ? 'animate-spin' : ''}`} />
-                    <span>{sheetStatus.isChecking ? 'Mengecek Sheets...' : 'Cek Status Sheets'}</span>
+                    <span>← Ganti Petugas / Tim</span>
                   </button>
-
-                  {/* Quick reset active form button */}
-                  <button
-                    type="button"
-                    onClick={handleResetActiveForm}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-200 bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/60 rounded-full transition-colors cursor-pointer ml-1"
-                    title="Kosongkan nilai input pada tim aktif saat ini"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>Kosongkan Form</span>
-                  </button>
+                  <div className="text-xs text-slate-400">
+                    Petugas:{' '}
+                    <span className="font-bold text-cyan-300">
+                      {selectedOfficers.filter(Boolean).join(', ') || 'Belum dipilih'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setCurrentScreen('DASHBOARD')}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 rounded-xl transition-colors cursor-pointer glow-cyan"
                   >
-                    <span>Ke Dashboard Shift</span>
+                    <span>Lihat Dashboard Shift →</span>
                   </button>
                 </div>
               </div>
 
-              {/* Database Sheets verification banner if submitted in sheet */}
-              {(sheetStatus.isWapresSubmitted || sheetStatus.isRumdinSubmitted) && (
-                <div className="pt-2 border-t border-zinc-800/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-2 text-emerald-400">
-                    <Database className="w-3.5 h-3.5 shrink-0" />
-                    <span>
-                      <strong>Terdeteksi di Database Sheets:</strong>{' '}
-                      {sheetStatus.isBothSubmitted
-                        ? 'Laporan Tim Wapres & Tim Rumdin sudah tersimpan lengkap di Google Sheets.'
-                        : sheetStatus.isWapresSubmitted
-                        ? 'Laporan Tim Wapres sudah tersimpan di Google Sheets.'
-                        : 'Laporan Tim Rumdin sudah tersimpan di Google Sheets.'}
-                    </span>
+              {/* Status Bar */}
+              <div className="bg-slate-900/70 backdrop-blur-md border border-slate-800 rounded-2xl p-4 flex flex-col gap-3 shadow-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-slate-400">Status Shift:</span>
+
+                    {/* Wapres Status Badge */}
+                    {(() => {
+                      const hasWapresStarted = Boolean(
+                        activeCombinedForValidation.wapres?.officers?.[0] ||
+                        activeCombinedForValidation.wapres?.acoTM?.penyulangClose ||
+                        activeCombinedForValidation.wapres?.ups30?.loadR ||
+                        activeCombinedForValidation.wapres?.ups40?.loadR ||
+                        activeCombinedForValidation.wapres?.ups60?.loadR
+                      );
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTeam('WAPRES')}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                            shiftValidation.wapres.isComplete
+                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 glow-emerald'
+                              : hasWapresStarted
+                              ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
+                              : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-200'
+                          }`}
+                        >
+                          {shiftValidation.wapres.isComplete ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                          )}
+                          <span>
+                            Tim Wapres:{' '}
+                            {shiftValidation.wapres.isComplete
+                              ? `Sudah Selesai (${activeCombinedForValidation.wapres?.inspectionTime || 'Lengkap'})`
+                              : hasWapresStarted
+                              ? `Belum Selesai (${shiftValidation.wapres.detailedMissingText})`
+                              : 'Belum Diisi'}
+                          </span>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Rumdin Status Badge */}
+                    {(() => {
+                      const hasRumdinStarted = Boolean(
+                        activeCombinedForValidation.rumdin?.officers?.[0] ||
+                        activeCombinedForValidation.rumdin?.acoTRDipo?.garduT135Status ||
+                        activeCombinedForValidation.rumdin?.acoTRST12?.garduT93Status ||
+                        activeCombinedForValidation.rumdin?.ups40Dipo?.loadR ||
+                        activeCombinedForValidation.rumdin?.ups100ST12?.loadR
+                      );
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTeam('RUMDIN')}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                            shiftValidation.rumdin.isComplete
+                              ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/25 glow-cyan'
+                              : hasRumdinStarted
+                              ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
+                              : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-200'
+                          }`}
+                        >
+                          {shiftValidation.rumdin.isComplete ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                          )}
+                          <span>
+                            Tim Rumdin:{' '}
+                            {shiftValidation.rumdin.isComplete
+                              ? `Sudah Selesai (${activeCombinedForValidation.rumdin?.inspectionTime || 'Lengkap'})`
+                              : hasRumdinStarted
+                              ? `Belum Selesai (${shiftValidation.rumdin.detailedMissingText})`
+                              : 'Belum Diisi'}
+                          </span>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Cek Database Sheets Button */}
+                    <button
+                      type="button"
+                      onClick={() => checkSpreadsheetSubmission(false)}
+                      disabled={sheetStatus.isChecking}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-full transition-colors cursor-pointer disabled:opacity-50"
+                      title="Periksa database Google Sheets apakah laporan shift ini sudah disubmit"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${sheetStatus.isChecking ? 'animate-spin' : ''}`} />
+                      <span>{sheetStatus.isChecking ? 'Mengecek Sheets...' : 'Cek Status Sheets'}</span>
+                    </button>
+
+                    {/* Quick reset active form button */}
+                    <button
+                      type="button"
+                      onClick={handleResetActiveForm}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-slate-400 hover:text-slate-200 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-full transition-colors cursor-pointer ml-1"
+                      title="Kosongkan nilai input pada tim aktif saat ini"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Kosongkan Form</span>
+                    </button>
                   </div>
+
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        if (sheetStatus.wapres) {
-                          setWapresData(sheetStatus.wapres);
-                          submitWapresToShift(selectedDateKey, selectedShift, sheetStatus.wapres);
-                        }
-                        if (sheetStatus.rumdin) {
-                          setRumdinData(sheetStatus.rumdin);
-                          submitRumdinToShift(selectedDateKey, selectedShift, sheetStatus.rumdin);
-                        }
-                        setAllReports(getAllReports());
-                        showToast('Data dari Google Sheets berhasil dimuat ke formulir!');
-                      }}
-                      className="px-2.5 py-1 text-xs text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-md transition-colors cursor-pointer"
+                      onClick={() => setCurrentScreen('DASHBOARD')}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all cursor-pointer"
                     >
-                      Muat Data Sheets ke Formulir
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsPreviewOpen(true)}
-                      className="px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-md transition-colors cursor-pointer"
-                    >
-                      Buka Format WA
+                      <span>Ke Dashboard Shift</span>
                     </button>
                   </div>
                 </div>
+
+                {/* Database Sheets verification banner if submitted in sheet */}
+                {(sheetStatus.isWapresSubmitted || sheetStatus.isRumdinSubmitted) && (
+                  <div className="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 text-emerald-400">
+                      <Database className="w-3.5 h-3.5 shrink-0" />
+                      <span>
+                        <strong>Terdeteksi di Database Sheets:</strong>{' '}
+                        {sheetStatus.isBothSubmitted
+                          ? 'Laporan Tim Wapres & Tim Rumdin sudah tersimpan lengkap di Google Sheets.'
+                          : sheetStatus.isWapresSubmitted
+                          ? 'Laporan Tim Wapres sudah tersimpan di Google Sheets.'
+                          : 'Laporan Tim Rumdin sudah tersimpan di Google Sheets.'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (sheetStatus.wapres) {
+                            setWapresData(sheetStatus.wapres);
+                            submitWapresToShift(selectedDateKey, selectedShift, sheetStatus.wapres);
+                          }
+                          if (sheetStatus.rumdin) {
+                            setRumdinData(sheetStatus.rumdin);
+                            submitRumdinToShift(selectedDateKey, selectedShift, sheetStatus.rumdin);
+                          }
+                          setAllReports(getAllReports());
+                          showToast('Data dari Google Sheets berhasil dimuat ke formulir!');
+                        }}
+                        className="px-2.5 py-1 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors cursor-pointer"
+                      >
+                        Muat Data Sheets ke Formulir
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsPreviewOpen(true)}
+                        className="px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-lg transition-colors cursor-pointer"
+                      >
+                        Buka Format WA
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Active Team Form */}
+              {selectedTeam === 'WAPRES' ? (
+                <TimWapresForm
+                  data={wapresData}
+                  onChange={handleWapresChange}
+                  onSubmit={handleWapresSubmit}
+                  shiftName={selectedShift}
+                  isAlreadySubmitted={isWapresSubmitted}
+                  isEditMode={isEditMode}
+                  onStartEdit={() => handleEditSubmittedReport('WAPRES')}
+                  onCancelEdit={() => setIsEditMode(false)}
+                  onOpenHistory={() => setIsHistoryOpen(true)}
+                  onGoToDashboard={() => setCurrentScreen('DASHBOARD')}
+                  user={currentUser}
+                  activeSpreadsheet={activeSpreadsheet}
+                  hasSheetsConfigured={Boolean(directWebhookUrl || activeSpreadsheet)}
+                  autoSyncEnabled={autoSyncEnabled}
+                  onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
+                  onQuickSyncAcoToSheets={handleQuickSyncAco}
+                  onQuickSyncWapresUps={handleQuickSyncWapresUps}
+                  isSyncingSheets={isSyncingSheets}
+                  isShiftTimeAllowed={isShiftTimeAllowed}
+                  currentActiveShift={liveActiveShift}
+                  onSwitchToActiveShift={() => {
+                    setSelectedDateKey(getDateKey());
+                    setSelectedShift(liveActiveShift);
+                  }}
+                />
+              ) : (
+                <TimRumdinForm
+                  data={rumdinData}
+                  onChange={handleRumdinChange}
+                  onSubmit={handleRumdinSubmit}
+                  shiftName={selectedShift}
+                  isAlreadySubmitted={isRumdinSubmitted}
+                  isEditMode={isEditMode}
+                  onStartEdit={() => handleEditSubmittedReport('RUMDIN')}
+                  onCancelEdit={() => setIsEditMode(false)}
+                  onOpenHistory={() => setIsHistoryOpen(true)}
+                  onGoToDashboard={() => setCurrentScreen('DASHBOARD')}
+                  user={currentUser}
+                  activeSpreadsheet={activeSpreadsheet}
+                  hasSheetsConfigured={Boolean(directWebhookUrl || activeSpreadsheet)}
+                  autoSyncEnabled={autoSyncEnabled}
+                  onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
+                  onQuickSyncDipo={handleQuickSyncDipo}
+                  onQuickSyncST12={handleQuickSyncST12}
+                  onQuickSyncRumdinUps={handleQuickSyncRumdinUps}
+                  onQuickSyncAllRumdin={handleQuickSyncAllRumdin}
+                  isSyncingSheets={isSyncingSheets}
+                  isShiftTimeAllowed={isShiftTimeAllowed}
+                  currentActiveShift={liveActiveShift}
+                  onSwitchToActiveShift={() => {
+                    setSelectedDateKey(getDateKey());
+                    setSelectedShift(liveActiveShift);
+                  }}
+                />
               )}
-            </div>
+            </motion.div>
+          )}
 
-            {/* Active Team Form */}
-            {selectedTeam === 'WAPRES' ? (
-              <TimWapresForm
-                data={wapresData}
-                onChange={handleWapresChange}
-                onSubmit={handleWapresSubmit}
-                shiftName={selectedShift}
-                isAlreadySubmitted={isWapresSubmitted}
-                isEditMode={isEditMode}
-                onStartEdit={() => handleEditSubmittedReport('WAPRES')}
-                onCancelEdit={() => setIsEditMode(false)}
-                onOpenHistory={() => setIsHistoryOpen(true)}
+          {/* VIEW 4: Shift Briefing Petugas Piket & WhatsApp Generator */}
+          {currentScreen === 'BRIEFING' && (
+            <motion.div
+              key="briefing-view"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              <ShiftBriefingScreen
                 onGoToDashboard={() => setCurrentScreen('DASHBOARD')}
-                user={currentUser}
-                activeSpreadsheet={activeSpreadsheet}
-                hasSheetsConfigured={Boolean(directWebhookUrl || activeSpreadsheet)}
-                autoSyncEnabled={autoSyncEnabled}
-                onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
-                onQuickSyncAcoToSheets={handleQuickSyncAco}
-                onQuickSyncWapresUps={handleQuickSyncWapresUps}
-                isSyncingSheets={isSyncingSheets}
-                isShiftTimeAllowed={isShiftTimeAllowed}
-                currentActiveShift={liveActiveShift}
-                onSwitchToActiveShift={() => {
-                  setSelectedDateKey(getDateKey());
-                  setSelectedShift(liveActiveShift);
-                }}
+                onGoToOfficers={() => setCurrentScreen('OFFICER_SELECT')}
+                currentWapresOfficers={activeCombinedForValidation.wapres?.officers || (selectedTeam === 'WAPRES' ? selectedOfficers : undefined)}
+                currentRumdinOfficers={activeCombinedForValidation.rumdin?.officers || (selectedTeam === 'RUMDIN' ? selectedOfficers : undefined)}
+                showToast={showToast}
               />
-            ) : (
-              <TimRumdinForm
-                data={rumdinData}
-                onChange={handleRumdinChange}
-                onSubmit={handleRumdinSubmit}
-                shiftName={selectedShift}
-                isAlreadySubmitted={isRumdinSubmitted}
-                isEditMode={isEditMode}
-                onStartEdit={() => handleEditSubmittedReport('RUMDIN')}
-                onCancelEdit={() => setIsEditMode(false)}
-                onOpenHistory={() => setIsHistoryOpen(true)}
-                onGoToDashboard={() => setCurrentScreen('DASHBOARD')}
-                user={currentUser}
-                activeSpreadsheet={activeSpreadsheet}
-                hasSheetsConfigured={Boolean(directWebhookUrl || activeSpreadsheet)}
-                autoSyncEnabled={autoSyncEnabled}
-                onOpenGoogleSheets={() => setIsSheetsModalOpen(true)}
-                onQuickSyncDipo={handleQuickSyncDipo}
-                onQuickSyncST12={handleQuickSyncST12}
-                onQuickSyncRumdinUps={handleQuickSyncRumdinUps}
-                onQuickSyncAllRumdin={handleQuickSyncAllRumdin}
-                isSyncingSheets={isSyncingSheets}
-                isShiftTimeAllowed={isShiftTimeAllowed}
-                currentActiveShift={liveActiveShift}
-                onSwitchToActiveShift={() => {
-                  setSelectedDateKey(getDateKey());
-                  setSelectedShift(liveActiveShift);
-                }}
-              />
-            )}
-          </>
-        )}
-
-        {/* VIEW 4: Shift Briefing Petugas Piket & WhatsApp Generator */}
-        {currentScreen === 'BRIEFING' && (
-          <ShiftBriefingScreen
-            onGoToDashboard={() => setCurrentScreen('DASHBOARD')}
-            onGoToOfficers={() => setCurrentScreen('OFFICER_SELECT')}
-            currentWapresOfficers={activeCombinedForValidation.wapres?.officers || (selectedTeam === 'WAPRES' ? selectedOfficers : undefined)}
-            currentRumdinOfficers={activeCombinedForValidation.rumdin?.officers || (selectedTeam === 'RUMDIN' ? selectedOfficers : undefined)}
-            showToast={showToast}
-          />
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Floating WhatsApp Action button on mobile when both ready */}

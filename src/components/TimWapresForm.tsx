@@ -132,39 +132,39 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
   return (
     <form id="tim-wapres-form" onSubmit={handleFormSubmit} className="space-y-6">
       {/* Banner / Info */}
-      <div className="bg-gradient-to-r from-emerald-950/40 via-zinc-900 to-zinc-900 border border-emerald-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
+      <div className="glass-panel-green rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xl border border-emerald-500/30 glow-emerald/20">
         <div>
-          <div className="inline-flex items-center gap-2 text-emerald-400 font-bold text-sm">
+          <div className="inline-flex items-center gap-2 text-emerald-400 font-bold text-xs tracking-wider uppercase">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             FORMULIR INSPEKSI: TIM WAPRES
           </div>
-          <h2 className="text-lg font-bold text-zinc-100 mt-0.5">
+          <h2 className="text-lg sm:text-xl font-black text-white tracking-tight mt-0.5">
             Pantauan UPS Dan ACO TM Gardu D 126 SetWapres
           </h2>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-zinc-400">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2 text-xs text-slate-400">
             <span>Shift: <strong className="text-emerald-300 font-semibold">{shiftName}</strong></span>
-            <span className="text-zinc-600">•</span>
-            <span className="inline-flex items-center gap-1 text-zinc-300">
-              <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-slate-600">•</span>
+            <span className="inline-flex items-center gap-1.5 text-slate-300">
+              <Calendar className="w-3.5 h-3.5 text-cyan-400" />
               <span>{liveDate}</span>
             </span>
-            <span className="text-zinc-600">•</span>
-            <span className="inline-flex items-center gap-1 text-emerald-300 font-mono font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
+            <span className="text-slate-600">•</span>
+            <span className="inline-flex items-center gap-1.5 text-emerald-300 font-mono font-bold bg-emerald-950/70 px-2.5 py-0.5 rounded-lg border border-emerald-500/30 shadow-xs">
               <Clock className="w-3 h-3 text-emerald-400 animate-pulse" />
               <span>{liveTime}</span>
-              <span className="text-[10px] text-zinc-400 font-normal ml-0.5">(Real-Time)</span>
+              <span className="text-[10px] text-slate-400 font-normal ml-0.5">(Real-Time)</span>
             </span>
             {hasOfficers && (
               <>
-                <span className="text-zinc-600">•</span>
-                <span className="inline-flex items-center gap-1.5 text-zinc-200 bg-zinc-800/90 px-2.5 py-0.5 rounded-md border border-zinc-700/80">
+                <span className="text-slate-600">•</span>
+                <span className="inline-flex items-center gap-1.5 text-slate-200 bg-slate-900/90 px-2.5 py-0.5 rounded-lg border border-slate-700/80">
                   <Users className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Petugas: <strong className="text-emerald-300 font-semibold">{data.officers[0]} & {data.officers[1]}</strong></span>
                   {!isAlreadySubmitted && (
                     <button
                       type="button"
                       onClick={() => setIsChangingOfficers(!isChangingOfficers)}
-                      className="ml-1 text-[11px] text-zinc-400 hover:text-emerald-300 underline cursor-pointer"
+                      className="ml-1 text-[11px] text-cyan-400 hover:text-cyan-300 underline cursor-pointer"
                     >
                       {isChangingOfficers ? 'Tutup' : 'Ubah'}
                     </button>
@@ -176,7 +176,7 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         </div>
 
         {isAlreadySubmitted && !isEditMode && (
-          <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-2 rounded-lg font-medium">
+          <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3.5 py-2 rounded-xl font-semibold shadow-xs">
             <Lock className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>Formulir Terkunci ({data.inspectionTime})</span>
           </div>
@@ -185,10 +185,10 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
 
       {/* JIKA SUDAH DISUBMIT DAN TIDAK DALAM MODE EDIT: TAMPILKAN KUNCI FORM */}
       {isAlreadySubmitted && !isEditMode ? (
-        <div id="wapres-locked-screen" className="bg-zinc-900 border-2 border-emerald-500/60 rounded-2xl p-5 sm:p-7 shadow-2xl space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-5">
+        <div id="wapres-locked-screen" className="glass-panel rounded-2xl p-5 sm:p-7 shadow-2xl space-y-6 border border-emerald-500/50 glow-emerald/20">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
             <div className="flex items-start sm:items-center gap-3.5">
-              <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
+              <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0 shadow-inner">
                 <Lock className="w-7 h-7 text-emerald-400" />
               </div>
               <div>
@@ -197,12 +197,12 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                     Formulir Terkunci (Sudah Disubmit)
                   </span>
-                  <span className="text-xs text-zinc-400 font-semibold">Shift {shiftName}</span>
+                  <span className="text-xs text-slate-400 font-semibold">Shift {shiftName}</span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-black text-zinc-100 mt-1">
+                <h3 className="text-lg sm:text-xl font-black text-white mt-1">
                   Laporan Tim Wapres Telah Selesai Disubmit
                 </h3>
-                <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
                   Sistem mengunci formulir ini untuk shift yang sama agar petugas tidak melakukan input ulang ganda.
                 </p>
               </div>
@@ -211,57 +211,57 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
 
           {/* Rincian Ringkas Data Terkirim */}
           <div className="space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Data Tersimpan di Laporan Shift:
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-              <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-1">
-                <div className="text-zinc-500 text-[11px]">Petugas Pelapor:</div>
-                <div className="font-bold text-zinc-200 text-sm">
+              <div className="glass-panel-subtle p-3.5 rounded-xl border border-slate-800 space-y-1">
+                <div className="text-slate-500 text-[11px]">Petugas Pelapor:</div>
+                <div className="font-bold text-slate-200 text-sm">
                   {data.officers.filter(Boolean).join(' & ') || '-'}
                 </div>
               </div>
 
-              <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-1">
-                <div className="text-zinc-500 text-[11px]">Waktu Inspeksi:</div>
-                <div className="font-bold text-zinc-200 text-sm">
-                  <span className="font-mono text-emerald-400">{data.inspectionTime || '-'}</span> • {data.inspectionDate || '-'}
+              <div className="glass-panel-subtle p-3.5 rounded-xl border border-slate-800 space-y-1">
+                <div className="text-slate-500 text-[11px]">Waktu Inspeksi:</div>
+                <div className="font-bold text-slate-200 text-sm">
+                  <span className="font-mono text-emerald-400 font-bold">{data.inspectionTime || '-'}</span> • {data.inspectionDate || '-'}
                 </div>
               </div>
 
-              <div className="bg-zinc-950/80 p-3 rounded-xl border border-zinc-800 space-y-1 sm:col-span-2 md:col-span-1">
-                <div className="text-zinc-500 text-[11px]">ACO TM Gardu D 126:</div>
-                <div className="font-bold text-zinc-200">
+              <div className="glass-panel-subtle p-3.5 rounded-xl border border-slate-800 space-y-1 sm:col-span-2 md:col-span-1">
+                <div className="text-slate-500 text-[11px]">ACO TM Gardu D 126:</div>
+                <div className="font-bold text-slate-200">
                   CLOSE: <span className="text-emerald-400">{data.acoTM.penyulangClose || '-'}</span>
                 </div>
-                <div className="text-[11px] text-zinc-400">
+                <div className="text-[11px] text-slate-400">
                   Tegangan: {data.acoTM.teganganMasukTM || '-'} kV • {data.acoTM.arusBebanTM || '-'} A
                 </div>
               </div>
             </div>
 
             {/* Beban UPS */}
-            <div className="bg-zinc-950/80 p-3.5 rounded-xl border border-zinc-800 space-y-2">
-              <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wide">
+            <div className="glass-panel-subtle p-4 rounded-xl border border-slate-800 space-y-2.5">
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
                 Beban UPS (Arus Fase R / S / T):
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-xs">
-                <div className="bg-zinc-900/90 p-2.5 rounded-lg border border-zinc-800">
-                  <div className="text-zinc-500 text-[11px]">UPS 30 KVA</div>
-                  <div className="font-mono font-bold text-zinc-200 mt-0.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-center text-xs">
+                <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                  <div className="text-slate-400 text-[11px] font-medium">UPS 30 KVA</div>
+                  <div className="font-mono font-bold text-white mt-0.5">
                     {data.ups30.loadR || '-'}/{data.ups30.loadS || '-'}/{data.ups30.loadT || '-'} A
                   </div>
                 </div>
-                <div className="bg-zinc-900/90 p-2.5 rounded-lg border border-zinc-800">
-                  <div className="text-zinc-500 text-[11px]">UPS 40 KVA</div>
-                  <div className="font-mono font-bold text-zinc-200 mt-0.5">
+                <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                  <div className="text-slate-400 text-[11px] font-medium">UPS 40 KVA</div>
+                  <div className="font-mono font-bold text-white mt-0.5">
                     {data.ups40.loadR || '-'}/{data.ups40.loadS || '-'}/{data.ups40.loadT || '-'} A
                   </div>
                 </div>
-                <div className="bg-zinc-900/90 p-2.5 rounded-lg border border-zinc-800">
-                  <div className="text-zinc-500 text-[11px]">UPS 60 KVA</div>
-                  <div className="font-mono font-bold text-zinc-200 mt-0.5">
+                <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                  <div className="text-slate-400 text-[11px] font-medium">UPS 60 KVA</div>
+                  <div className="font-mono font-bold text-white mt-0.5">
                     {data.ups60.loadR || '-'}/{data.ups60.loadS || '-'}/{data.ups60.loadT || '-'} A
                   </div>
                 </div>
@@ -270,12 +270,12 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
           </div>
 
           {/* Kotak Petunjuk Koreksi / Edit */}
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-xs text-amber-200 space-y-1.5">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-xs text-amber-200 space-y-1.5 shadow-xs">
             <div className="font-bold flex items-center gap-2 text-amber-300">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
               <span>Ingin Melakukan Koreksi atau Pembaruan Data?</span>
             </div>
-            <p className="text-zinc-300 leading-relaxed">
+            <p className="text-slate-300 leading-relaxed">
               Buka menu <strong>Riwayat Laporan</strong>, lalu klik tombol <strong>Edit & Update</strong> pada laporan shift ini. Setelah edit disimpan, data di arsip spreadsheet bulanan akan otomatis diperbarui.
             </p>
           </div>
@@ -287,7 +287,7 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                 type="button"
                 id="btn-start-edit-wapres-locked"
                 onClick={onStartEdit}
-                className="px-5 py-3 rounded-xl font-extrabold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
+                className="px-5 py-3 rounded-xl font-bold text-xs sm:text-sm bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 cursor-pointer"
               >
                 <Edit3 className="w-4 h-4" />
                 <span>Buka Data untuk Mengedit & Mengupdate</span>
@@ -299,9 +299,9 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                 type="button"
                 id="btn-open-history-wapres-locked"
                 onClick={onOpenHistory}
-                className="px-4 py-3 rounded-xl font-bold text-xs sm:text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="px-4 py-3 rounded-xl font-bold text-xs sm:text-sm bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
               >
-                <History className="w-4 h-4 text-blue-400" />
+                <History className="w-4 h-4 text-cyan-400" />
                 <span>Menu Riwayat Laporan</span>
               </button>
             )}
@@ -311,10 +311,10 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                 type="button"
                 id="btn-back-dashboard-wapres-locked"
                 onClick={onGoToDashboard}
-                className="px-4 py-3 rounded-xl font-bold text-xs sm:text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="px-4 py-3 rounded-xl font-bold text-xs sm:text-sm bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
               >
                 <span>Kembali ke Dashboard Shift</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 text-cyan-400" />
               </button>
             )}
           </div>
@@ -323,9 +323,9 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         <>
           {/* Mode Edit Banner */}
           {isEditMode && (
-            <div id="wapres-edit-banner" className="bg-amber-500/15 border-2 border-amber-500/50 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-lg">
+            <div id="wapres-edit-banner" className="glass-panel rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-lg border border-amber-500/40 glow-amber/20">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
                   <Edit3 className="w-5 h-5 text-amber-400" />
                 </div>
                 <div>
@@ -335,7 +335,7 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                       Shift {shiftName}
                     </span>
                   </div>
-                  <p className="text-zinc-300 mt-0.5">
+                  <p className="text-slate-300 mt-0.5">
                     Lakukan koreksi data yang diperlukan. Setelah disimpan, data di arsip spreadsheet bulanan akan otomatis diperbarui.
                   </p>
                 </div>
@@ -344,7 +344,7 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                 <button
                   type="button"
                   onClick={onCancelEdit}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all active:scale-95 cursor-pointer self-start sm:self-auto shrink-0"
                 >
                   Batal Edit
                 </button>
@@ -355,12 +355,12 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
       {/* 1. Pemilihan Petugas (Muncul Sebelum Form Muncul) */}
       {!hasOfficers ? (
         <div className="space-y-4">
-          <div className="bg-zinc-900/80 border border-emerald-500/30 rounded-xl p-4 text-xs text-zinc-300 space-y-1">
+          <div className="glass-panel-green rounded-2xl p-4 sm:p-5 text-xs text-slate-300 space-y-1.5 border border-emerald-500/30">
             <div className="flex items-center gap-2 font-bold text-emerald-400 text-sm">
               <Users className="w-4 h-4" />
               <span>Langkah 1: Tentukan 2 Petugas Piket Tim Wapres</span>
             </div>
-            <p className="text-zinc-400">
+            <p className="text-slate-400">
               Silakan pilih 2 petugas piket dari daftar resmi di bawah ini. Formulir inspeksi kelistrikan (ACO TM & UPS) akan otomatis terbuka setelah 2 petugas dipilih.
             </p>
           </div>
@@ -373,13 +373,13 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
           />
 
           {/* Placeholder Kunci Form */}
-          <div className="bg-zinc-900/40 border border-dashed border-zinc-800 rounded-2xl p-8 text-center space-y-3">
-            <div className="mx-auto w-12 h-12 rounded-full bg-zinc-800/80 flex items-center justify-center text-zinc-400 border border-zinc-700/60">
-              <Lock className="w-6 h-6 text-emerald-400/70" />
+          <div className="glass-panel rounded-2xl p-8 text-center space-y-3 border border-dashed border-slate-800">
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-slate-400 border border-slate-700/60 shadow-inner">
+              <Lock className="w-6 h-6 text-emerald-400/80" />
             </div>
             <div className="space-y-1">
-              <h4 className="text-sm font-bold text-zinc-200">Formulir Inspeksi Kelistrikan Masih Terkunci</h4>
-              <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
+              <h4 className="text-sm font-bold text-white">Formulir Inspeksi Kelistrikan Masih Terkunci</h4>
+              <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
                 Pilih <strong>Petugas 1</strong> dan <strong>Petugas 2</strong> di atas terlebih dahulu untuk membuka formulir pemantauan ACO TM Gardu D 126 dan beban UPS Tim Wapres.
               </p>
             </div>
@@ -388,11 +388,11 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
       ) : isChangingOfficers ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-300">Ubah Petugas Piket:</span>
+            <span className="text-xs font-semibold text-slate-300">Ubah Petugas Piket:</span>
             <button
               type="button"
               onClick={() => setIsChangingOfficers(false)}
-              className="text-xs text-zinc-400 hover:text-zinc-200 underline cursor-pointer"
+              className="text-xs text-cyan-400 hover:text-cyan-300 underline cursor-pointer"
             >
               Tutup
             </button>
@@ -416,23 +416,23 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         <>
 
       {/* 2. ACO TM Gardu D 126 SetWapres */}
-      <div id="aco-tm-card" className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 md:p-5 space-y-4 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-zinc-800 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+      <div id="aco-tm-card" className="glass-panel rounded-2xl p-4 md:p-6 space-y-5 shadow-xl border border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 glow-cyan">
               <Radio className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-zinc-100 text-base">Pantauan ACO TM Gardu D 126 SetWapres</h3>
+                <h3 className="font-bold text-white text-base">Pantauan ACO TM Gardu D 126 SetWapres</h3>
                 {activeSpreadsheet && (
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     Sheets Terhubung
                   </span>
                 )}
               </div>
-              <p className="text-xs text-zinc-400">Status penyulang, alarm, remote, dan indikator kubikel</p>
+              <p className="text-xs text-slate-400">Status penyulang, alarm, remote, dan indikator kubikel</p>
             </div>
           </div>
 
@@ -443,10 +443,10 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                 id="btn-quick-sync-aco"
                 onClick={onQuickSyncAcoToSheets}
                 disabled={isSyncingSheets}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 transition-colors cursor-pointer shadow-xs"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 transition-all cursor-pointer shadow-xs active:scale-95"
                 title="Kirim status ACO TM ini ke Google Spreadsheet secara langsung"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
                 <span>{isSyncingSheets ? 'Mengirim...' : 'Kirim Data ke Sheets'}</span>
               </button>
             )}
@@ -456,30 +456,30 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         {/* Status Penyulang Close & Open */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-300">
+            <span className="text-xs font-semibold text-slate-300">
               Pilihan Penyulang ACO TM Gardu D 126:
             </span>
             <button
               type="button"
               id="btn-swap-penyulang-aco"
               onClick={handleSwapPenyulang}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 hover:border-zinc-600 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-cyan-500/40 transition-all active:scale-95 cursor-pointer"
               title="Tukar status antara Penyulang Close dan Penyulang Open"
             >
-              <ArrowLeftRight className="w-3.5 h-3.5 text-emerald-400" />
+              <ArrowLeftRight className="w-3.5 h-3.5 text-cyan-400" />
               <span>Tukar Posisi (Close ⇄ Open)</span>
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Close */}
-            <div className="bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/90 space-y-2.5">
+            <div className="glass-panel-subtle p-4 rounded-xl border border-slate-800/90 space-y-3">
               <div className="flex items-center justify-between">
-                <label htmlFor="penyulang-close-select" className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <label htmlFor="penyulang-close-select" className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 glow-emerald"></span>
                   <span>Status Penyulang: CLOSE ( // )</span>
                 </label>
-                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-mono font-semibold">
+                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-0.5 rounded-full font-mono font-bold">
                   AKTIF / MASUK
                 </span>
               </div>
@@ -498,7 +498,7 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                       updateAcoTM('penyulangClose', e.target.value);
                     }
                   }}
-                  className="w-full bg-zinc-900 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-xs sm:text-sm text-zinc-100 font-medium focus:outline-none"
+                  className="w-full bg-slate-950/80 border border-slate-700/80 focus:border-emerald-400 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-slate-100 font-medium focus:outline-none focus:ring-1 focus:ring-emerald-400 transition-all"
                 >
                   <option value="" disabled>-- Pilih Penyulang Close ( // ) --</option>
                   {ACO_TM_PENYULANG_OPTIONS.map((opt) => (
@@ -513,8 +513,8 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
               </div>
 
               {/* 4 Quick-Click Options */}
-              <div className="space-y-1">
-                <span className="text-[10px] font-semibold text-zinc-400 block">
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-semibold text-slate-400 block">
                   Klik Cepat 4 Opsi Penyulang:
                 </span>
                 <div className="grid grid-cols-1 gap-1.5">
@@ -525,14 +525,14 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                         type="button"
                         key={opt}
                         onClick={() => updateAcoTM('penyulangClose', opt)}
-                        className={`w-full text-left text-xs px-2.5 py-1.5 rounded-lg border transition-all flex items-center justify-between ${
+                        className={`w-full text-left text-xs px-3 py-2 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
                           isSelected
-                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-semibold shadow-xs'
-                            : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 font-semibold shadow-xs'
+                            : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                         }`}
                       >
                         <span className="truncate">{opt}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 ml-1.5" />}
+                        {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 ml-1.5 stroke-[2.5]" />}
                       </button>
                     );
                   })}
@@ -547,19 +547,19 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                   value={data.acoTM.penyulangClose}
                   onChange={(e) => updateAcoTM('penyulangClose', e.target.value)}
                   placeholder="Atau ketik custom penyulang..."
-                  className="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500 rounded-lg px-2.5 py-1.5 text-xs text-zinc-300 font-mono focus:outline-none"
+                  className="w-full bg-slate-950/80 border border-slate-800 focus:border-emerald-400 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:ring-1 focus:ring-emerald-400 transition-all"
                 />
               </div>
             </div>
 
             {/* Open */}
-            <div className="bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/90 space-y-2.5">
+            <div className="glass-panel-subtle p-4 rounded-xl border border-slate-800/90 space-y-3">
               <div className="flex items-center justify-between">
-                <label htmlFor="penyulang-open-select" className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                <label htmlFor="penyulang-open-select" className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 glow-amber"></span>
                   <span>Status Penyulang: OPEN ( # )</span>
                 </label>
-                <span className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-mono font-semibold">
+                <span className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2.5 py-0.5 rounded-full font-mono font-bold">
                   STANDBY / LEPAS
                 </span>
               </div>
@@ -578,7 +578,7 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                       updateAcoTM('penyulangOpen', e.target.value);
                     }
                   }}
-                  className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-500 rounded-lg px-3 py-2 text-xs sm:text-sm text-zinc-100 font-medium focus:outline-none"
+                  className="w-full bg-slate-950/80 border border-slate-700/80 focus:border-amber-400 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-slate-100 font-medium focus:outline-none focus:ring-1 focus:ring-amber-400 transition-all"
                 >
                   <option value="" disabled>-- Pilih Penyulang Open ( # ) --</option>
                   {ACO_TM_PENYULANG_OPTIONS.map((opt) => (
@@ -593,8 +593,8 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
               </div>
 
               {/* 4 Quick-Click Options */}
-              <div className="space-y-1">
-                <span className="text-[10px] font-semibold text-zinc-400 block">
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-semibold text-slate-400 block">
                   Klik Cepat 4 Opsi Penyulang:
                 </span>
                 <div className="grid grid-cols-1 gap-1.5">
@@ -605,14 +605,14 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                         type="button"
                         key={opt}
                         onClick={() => updateAcoTM('penyulangOpen', opt)}
-                        className={`w-full text-left text-xs px-2.5 py-1.5 rounded-lg border transition-all flex items-center justify-between ${
+                        className={`w-full text-left text-xs px-3 py-2 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
                           isSelected
-                            ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 font-semibold shadow-xs'
-                            : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                            ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 font-semibold shadow-xs'
+                            : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                         }`}
                       >
                         <span className="truncate">{opt}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0 ml-1.5" />}
+                        {isSelected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0 ml-1.5 stroke-[2.5]" />}
                       </button>
                     );
                   })}
@@ -627,7 +627,7 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
                   value={data.acoTM.penyulangOpen}
                   onChange={(e) => updateAcoTM('penyulangOpen', e.target.value)}
                   placeholder="Atau ketik custom penyulang..."
-                  className="w-full bg-zinc-950 border border-zinc-800 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-zinc-300 font-mono focus:outline-none"
+                  className="w-full bg-slate-950/80 border border-slate-800 focus:border-amber-400 rounded-xl px-3 py-2 text-xs text-slate-300 font-mono focus:outline-none focus:ring-1 focus:ring-amber-400 transition-all"
                 />
               </div>
             </div>
@@ -637,14 +637,14 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         {/* Toggles: Alarm Status, Power ACO, Status Charging, Status Remote, Lampu Indikator */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-2">
           {/* Alarm Status */}
-          <div className="bg-zinc-950/70 p-2.5 rounded-lg border border-zinc-800 space-y-1.5">
-            <span className="text-[11px] font-semibold text-zinc-300 block">Alarm Status</span>
-            <div className="grid grid-cols-2 gap-1 bg-zinc-900 p-0.5 rounded-md border border-zinc-800">
+          <div className="glass-panel-subtle p-3 rounded-xl border border-slate-800 space-y-2">
+            <span className="text-[11px] font-semibold text-slate-300 block">Alarm Status</span>
+            <div className="grid grid-cols-2 gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
               <button
                 type="button"
                 onClick={() => updateAcoTM('alarmStatus', 'NORMAL')}
-                className={`text-[11px] py-1 font-bold rounded ${
-                  data.acoTM.alarmStatus === 'NORMAL' ? 'bg-emerald-600 text-white' : 'text-zinc-400'
+                className={`text-[11px] py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
+                  data.acoTM.alarmStatus === 'NORMAL' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 NORMAL
@@ -652,8 +652,8 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
               <button
                 type="button"
                 onClick={() => updateAcoTM('alarmStatus', 'ALARM')}
-                className={`text-[11px] py-1 font-bold rounded ${
-                  data.acoTM.alarmStatus === 'ALARM' ? 'bg-rose-600 text-white' : 'text-zinc-400'
+                className={`text-[11px] py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
+                  data.acoTM.alarmStatus === 'ALARM' ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 ALARM
@@ -662,14 +662,14 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
           </div>
 
           {/* Power ACO */}
-          <div className="bg-zinc-950/70 p-2.5 rounded-lg border border-zinc-800 space-y-1.5">
-            <span className="text-[11px] font-semibold text-zinc-300 block">Power ACO</span>
-            <div className="grid grid-cols-2 gap-1 bg-zinc-900 p-0.5 rounded-md border border-zinc-800">
+          <div className="glass-panel-subtle p-3 rounded-xl border border-slate-800 space-y-2">
+            <span className="text-[11px] font-semibold text-slate-300 block">Power ACO</span>
+            <div className="grid grid-cols-2 gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
               <button
                 type="button"
                 onClick={() => updateAcoTM('powerACO', 'ON')}
-                className={`text-[11px] py-1 font-bold rounded ${
-                  data.acoTM.powerACO === 'ON' ? 'bg-emerald-600 text-white' : 'text-zinc-400'
+                className={`text-[11px] py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
+                  data.acoTM.powerACO === 'ON' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 ON
@@ -677,8 +677,8 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
               <button
                 type="button"
                 onClick={() => updateAcoTM('powerACO', 'OFF')}
-                className={`text-[11px] py-1 font-bold rounded ${
-                  data.acoTM.powerACO === 'OFF' ? 'bg-rose-600 text-white' : 'text-zinc-400'
+                className={`text-[11px] py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
+                  data.acoTM.powerACO === 'OFF' ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 OFF
@@ -687,14 +687,14 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
           </div>
 
           {/* Status Charging Kubikel */}
-          <div className="bg-zinc-950/70 p-2.5 rounded-lg border border-zinc-800 space-y-1.5">
-            <span className="text-[11px] font-semibold text-zinc-300 block">Charging Kubikel</span>
-            <div className="grid grid-cols-2 gap-1 bg-zinc-900 p-0.5 rounded-md border border-zinc-800">
+          <div className="glass-panel-subtle p-3 rounded-xl border border-slate-800 space-y-2">
+            <span className="text-[11px] font-semibold text-slate-300 block">Charging Kubikel</span>
+            <div className="grid grid-cols-2 gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
               <button
                 type="button"
                 onClick={() => updateAcoTM('chargingKubikel', 'YA')}
-                className={`text-[11px] py-1 font-bold rounded ${
-                  data.acoTM.chargingKubikel === 'YA' ? 'bg-emerald-600 text-white' : 'text-zinc-400'
+                className={`text-[11px] py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
+                  data.acoTM.chargingKubikel === 'YA' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 YA
@@ -702,8 +702,8 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
               <button
                 type="button"
                 onClick={() => updateAcoTM('chargingKubikel', 'TIDAK')}
-                className={`text-[11px] py-1 font-bold rounded ${
-                  data.acoTM.chargingKubikel === 'TIDAK' ? 'bg-amber-600 text-white' : 'text-zinc-400'
+                className={`text-[11px] py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
+                  data.acoTM.chargingKubikel === 'TIDAK' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 TIDAK
@@ -712,14 +712,14 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
           </div>
 
           {/* Status Remote Kubikel */}
-          <div className="bg-zinc-950/70 p-2.5 rounded-lg border border-zinc-800 space-y-1.5">
-            <span className="text-[11px] font-semibold text-zinc-300 block">Remote Kubikel</span>
-            <div className="grid grid-cols-2 gap-1 bg-zinc-900 p-0.5 rounded-md border border-zinc-800">
+          <div className="glass-panel-subtle p-3 rounded-xl border border-slate-800 space-y-2">
+            <span className="text-[11px] font-semibold text-slate-300 block">Remote Kubikel</span>
+            <div className="grid grid-cols-2 gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
               <button
                 type="button"
                 onClick={() => updateAcoTM('remoteKubikel', 'AUTO')}
-                className={`text-[11px] py-1 font-bold rounded ${
-                  data.acoTM.remoteKubikel === 'AUTO' ? 'bg-emerald-600 text-white' : 'text-zinc-400'
+                className={`text-[11px] py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
+                  data.acoTM.remoteKubikel === 'AUTO' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 AUTO
@@ -727,8 +727,8 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
               <button
                 type="button"
                 onClick={() => updateAcoTM('remoteKubikel', 'LOCAL')}
-                className={`text-[11px] py-1 font-bold rounded ${
-                  data.acoTM.remoteKubikel === 'LOCAL' ? 'bg-amber-600 text-white' : 'text-zinc-400'
+                className={`text-[11px] py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
+                  data.acoTM.remoteKubikel === 'LOCAL' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 LOCAL
@@ -737,14 +737,14 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
           </div>
 
           {/* Lampu Indikator */}
-          <div className="bg-zinc-950/70 p-2.5 rounded-lg border border-zinc-800 space-y-1.5 col-span-2 sm:col-span-1">
-            <span className="text-[11px] font-semibold text-zinc-300 block">Lampu Indikator</span>
-            <div className="grid grid-cols-2 gap-1 bg-zinc-900 p-0.5 rounded-md border border-zinc-800">
+          <div className="glass-panel-subtle p-3 rounded-xl border border-slate-800 space-y-2 col-span-2 sm:col-span-1">
+            <span className="text-[11px] font-semibold text-slate-300 block">Lampu Indikator</span>
+            <div className="grid grid-cols-2 gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
               <button
                 type="button"
                 onClick={() => updateAcoTM('lampuIndikator', 'ON')}
-                className={`text-[11px] py-1 font-bold rounded ${
-                  data.acoTM.lampuIndikator === 'ON' ? 'bg-emerald-600 text-white' : 'text-zinc-400'
+                className={`text-[11px] py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
+                  data.acoTM.lampuIndikator === 'ON' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 ON
@@ -752,8 +752,8 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
               <button
                 type="button"
                 onClick={() => updateAcoTM('lampuIndikator', 'OFF')}
-                className={`text-[11px] py-1 font-bold rounded ${
-                  data.acoTM.lampuIndikator === 'OFF' ? 'bg-rose-600 text-white' : 'text-zinc-400'
+                className={`text-[11px] py-1.5 font-bold rounded-lg transition-all cursor-pointer ${
+                  data.acoTM.lampuIndikator === 'OFF' ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 OFF
@@ -763,8 +763,8 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         </div>
 
         {/* Keterangan ACO TM */}
-        <div className="space-y-1">
-          <label htmlFor="aco-tm-keterangan" className="text-xs font-semibold text-zinc-300">
+        <div className="space-y-1.5">
+          <label htmlFor="aco-tm-keterangan" className="text-xs font-semibold text-slate-300">
             Keterangan ACO TM
           </label>
           <input
@@ -773,19 +773,19 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
             value={data.acoTM.keterangan}
             onChange={(e) => updateAcoTM('keterangan', e.target.value)}
             placeholder="Catatan kondisi operasional atau '-'"
-            className="w-full bg-zinc-950 border border-zinc-700 focus:border-emerald-500 rounded-lg px-3 py-2 text-xs text-zinc-100 focus:outline-none"
+            className="w-full bg-slate-950/80 border border-slate-700/80 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition-all"
           />
         </div>
       </div>
 
       {/* UPS Wapres Header with Quick Sync */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2 border-t border-zinc-800">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-3 border-t border-slate-800">
         <div>
-          <h3 className="font-bold text-zinc-100 text-sm flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <h3 className="font-bold text-white text-sm flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 glow-emerald"></span>
             <span>Pantauan Beban & Tegangan UPS Wapres (Gardu D 126)</span>
           </h3>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-slate-400">
             UPS 30 KVA (Lt. 1), UPS 40 KVA (Lt. 2), dan UPS 60 KVA (Lt. 3)
           </p>
         </div>
@@ -796,7 +796,7 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
             onClick={onQuickSyncWapresUps}
             disabled={isSyncingSheets}
             title="Kirim 3 beban UPS Wapres ke Google Sheets (Lembar LAPORAN_CETAK_UPS)"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/30 transition-colors cursor-pointer self-start sm:self-auto"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-emerald-300 hover:text-emerald-200 bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-500/30 transition-all active:scale-95 cursor-pointer self-start sm:self-auto shadow-xs"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSheets ? 'animate-spin' : ''}`} />
             <span>Kirim UPS Wapres ke Sheets</span>
@@ -831,18 +831,18 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         onChange={(ups60) => onChange({ ...data, ups60 })}
       />
 
-      {/* Submit Button */}
-      <div className="sticky bottom-4 z-10 bg-zinc-950/95 backdrop-blur-md p-3 sm:p-4 rounded-xl border border-zinc-800 shadow-xl space-y-2">
+      {/* Submit Button Sticky */}
+      <div className="sticky bottom-4 z-10 glass-panel p-3.5 sm:p-4 rounded-2xl border border-slate-700/80 shadow-2xl space-y-2 glow-emerald/10">
         {submitError && (
-          <div className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5">
+          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
               <span>{submitError}</span>
             </span>
             <button
               type="button"
               onClick={() => setSubmitError(null)}
-              className="text-zinc-400 hover:text-zinc-200 text-xs px-1.5 py-0.5"
+              className="text-slate-400 hover:text-white text-xs px-2 py-0.5 rounded cursor-pointer"
             >
               ✕
             </button>
@@ -850,14 +850,15 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
         )}
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-zinc-400">
+          <div className="text-xs text-slate-400">
             {!hasOfficers ? (
-              <span className="text-amber-400 font-medium flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span className="text-amber-400 font-medium flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
                 Pilih 2 petugas di bagian atas sebelum menyimpan laporan.
               </span>
             ) : (
-              <span className="text-emerald-400 font-medium">
+              <span className="text-emerald-400 font-medium flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
                 Petugas: {data.officers[0].toUpperCase()} & {data.officers[1].toUpperCase()} siap disubmit.
               </span>
             )}
@@ -867,13 +868,13 @@ export const TimWapresForm: React.FC<TimWapresFormProps> = ({
             <button
               type="submit"
               disabled={!hasOfficers}
-              className={`w-full sm:w-auto px-6 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
                 hasOfficers
-                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40 active:scale-95'
-                  : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                  ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/25 active:scale-95 glow-emerald'
+                  : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
               }`}
             >
-              <ShieldCheck className="w-4 h-4" />
+              <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
               {isEditMode
                 ? 'Simpan Koreksi & Update ke Arsip Spreadsheet'
                 : isAlreadySubmitted
