@@ -16,6 +16,8 @@ import {
   UserCheck,
   Edit3,
   Check,
+  Lock,
+  MessageSquare,
 } from 'lucide-react';
 
 interface OfficerSelectionScreenProps {
@@ -25,6 +27,8 @@ interface OfficerSelectionScreenProps {
   onSelectTeam: (team: 'WAPRES' | 'RUMDIN') => void;
   onProceedToForm: (officer1: string, officer2: string, team: 'WAPRES' | 'RUMDIN') => void;
   onGoToDashboard: () => void;
+  onGoToBriefing?: () => void;
+  onEditSubmittedReport?: (team: 'WAPRES' | 'RUMDIN') => void;
   isWapresSubmitted: boolean;
   isRumdinSubmitted: boolean;
 }
@@ -36,6 +40,8 @@ export const OfficerSelectionScreen: React.FC<OfficerSelectionScreenProps> = ({
   onSelectTeam,
   onProceedToForm,
   onGoToDashboard,
+  onGoToBriefing,
+  onEditSubmittedReport,
   isWapresSubmitted,
   isRumdinSubmitted,
 }) => {
@@ -89,8 +95,16 @@ export const OfficerSelectionScreen: React.FC<OfficerSelectionScreenProps> = ({
     setIsTeamCollapsed(true);
   };
 
+  const isBothSubmitted = isWapresSubmitted && isRumdinSubmitted;
+  const isCurrentTeamSubmitted =
+    (team === 'WAPRES' && isWapresSubmitted) || (team === 'RUMDIN' && isRumdinSubmitted);
+
   const handleStartForm = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCurrentTeamSubmitted && onEditSubmittedReport) {
+      onEditSubmittedReport(team);
+      return;
+    }
     if (!isValidSelection) return;
     onProceedToForm(officer1, officer2, team);
   };
@@ -143,7 +157,20 @@ export const OfficerSelectionScreen: React.FC<OfficerSelectionScreenProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-center">
+          <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
+            {onGoToBriefing && (
+              <button
+                type="button"
+                id="officers-btn-briefing"
+                onClick={onGoToBriefing}
+                className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-amber-300 border border-amber-500/30 transition-all hover:border-amber-500/50 shadow-sm cursor-pointer"
+                title="Buka Shift Briefing: Pilih Petugas Piket & Format WhatsApp"
+              >
+                <MessageSquare className="w-4 h-4 text-amber-400" />
+                <span>Shift Briefing</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onGoToDashboard}
@@ -163,6 +190,85 @@ export const OfficerSelectionScreen: React.FC<OfficerSelectionScreenProps> = ({
         </div>
       </div>
 
+      {/* JIKA SEMUA TIM SUDAH SUBMIT: KUNCI FORM PILIH PETUGAS & TIM */}
+      {isBothSubmitted ? (
+        <div id="all-teams-submitted-locked-card" className="bg-zinc-900 border-2 border-emerald-500/60 rounded-2xl p-5 sm:p-7 shadow-2xl space-y-6">
+          <div className="flex items-start sm:items-center gap-3.5 border-b border-zinc-800 pb-5">
+            <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
+              <Lock className="w-7 h-7 text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  Formulir Terkunci (Shift {activeShift})
+                </span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-black text-zinc-100 mt-1">
+                Laporan Shift {activeShift} Selesai Disubmit
+              </h3>
+              <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">
+                Formulir pilih petugas & tim serta formulir input baru disembunyikan dan dikunci untuk menghindari pengisian ulang pada shift yang sama. Petugas tetap dapat membuka data yang sudah disubmit untuk mengedit dan mengupdate.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="bg-zinc-950/80 p-4 rounded-xl border border-zinc-800 flex flex-col justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                  <Zap className="w-4 h-4" />
+                  <span>Tim Wapres</span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Status: Sudah Disubmit ke Database.
+                </p>
+              </div>
+              <button
+                type="button"
+                id="btn-edit-wapres-from-officers"
+                onClick={() => onEditSubmittedReport && onEditSubmittedReport('WAPRES')}
+                className="w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Buka & Edit Data Tim Wapres</span>
+              </button>
+            </div>
+
+            <div className="bg-zinc-950/80 p-4 rounded-xl border border-zinc-800 flex flex-col justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-blue-400 font-bold text-sm">
+                  <Building2 className="w-4 h-4" />
+                  <span>Tim Rumdin</span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Status: Sudah Disubmit ke Database.
+                </p>
+              </div>
+              <button
+                type="button"
+                id="btn-edit-rumdin-from-officers"
+                onClick={() => onEditSubmittedReport && onEditSubmittedReport('RUMDIN')}
+                className="w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Buka & Edit Data Tim Rumdin</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-zinc-800/80 flex justify-center">
+            <button
+              type="button"
+              onClick={onGoToDashboard}
+              className="px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <LayoutDashboard className="w-4 h-4 text-emerald-400" />
+              <span>Lihat Dashboard Shift Lengkap</span>
+            </button>
+          </div>
+        </div>
+      ) : (
       <form onSubmit={handleStartForm} className="space-y-4 sm:space-y-6">
         {/* Step 1: Petugas Piket Selection */}
         {isValidSelection && isOfficersCollapsed ? (
@@ -521,28 +627,56 @@ export const OfficerSelectionScreen: React.FC<OfficerSelectionScreenProps> = ({
         )}
 
         {/* CTA Button to proceed */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
-          <button
-            type="submit"
-            id="proceed-to-form-btn"
-            disabled={!isValidSelection}
-            className={`w-full py-3.5 sm:py-4 px-6 rounded-xl font-extrabold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all shadow-lg cursor-pointer ${
-              isValidSelection
-                ? team === 'WAPRES'
-                  ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-amber-500/20 hover:scale-[1.005] active:scale-[0.99]'
-                  : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 hover:scale-[1.005] active:scale-[0.99]'
-                : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50'
-            }`}
-          >
-            <span>
-              {!isValidSelection
-                ? 'Pilih 2 Petugas Terlebih Dahulu'
-                : `Lanjut ke Formulir ${team === 'WAPRES' ? 'Tim Wapres' : 'Tim Rumdin'}`}
-            </span>
-            <ArrowRight className="w-5 h-5" />
-          </button>
+        <div className="space-y-3 pt-1">
+          {isCurrentTeamSubmitted && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200 flex items-start gap-2.5">
+              <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-amber-300">Laporan Tim {team === 'WAPRES' ? 'Wapres' : 'Rumdin'} Sudah Disubmit:</span>
+                <p className="text-zinc-300 mt-0.5">
+                  Formulir dikunci untuk input baru pada shift ini. Klik tombol di bawah untuk membuka data yang sudah disubmit guna melakukan pengeditan atau pembaruan.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <button
+              type="submit"
+              id="proceed-to-form-btn"
+              disabled={!isValidSelection}
+              className={`w-full py-3.5 sm:py-4 px-6 rounded-xl font-extrabold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all shadow-lg cursor-pointer ${
+                isValidSelection
+                  ? isCurrentTeamSubmitted
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40 hover:scale-[1.005] active:scale-[0.99]'
+                    : team === 'WAPRES'
+                    ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-amber-500/20 hover:scale-[1.005] active:scale-[0.99]'
+                    : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 hover:scale-[1.005] active:scale-[0.99]'
+                  : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50'
+              }`}
+            >
+              {isCurrentTeamSubmitted ? (
+                <>
+                  <Edit3 className="w-5 h-5" />
+                  <span>
+                    Buka & Edit Data Laporan Tim {team === 'WAPRES' ? 'Wapres' : 'Rumdin'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span>
+                    {!isValidSelection
+                      ? 'Pilih 2 Petugas Terlebih Dahulu'
+                      : `Lanjut ke Formulir ${team === 'WAPRES' ? 'Tim Wapres' : 'Tim Rumdin'}`}
+                  </span>
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </form>
+      )}
     </div>
   );
 };

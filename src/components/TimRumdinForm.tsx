@@ -30,6 +30,7 @@ interface TimRumdinFormProps {
   shiftName: ShiftType | string;
   isAlreadySubmitted?: boolean;
   isEditMode?: boolean;
+  onStartEdit?: () => void;
   onCancelEdit?: () => void;
   onOpenHistory?: () => void;
   onGoToDashboard?: () => void;
@@ -55,6 +56,7 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
   shiftName,
   isAlreadySubmitted = false,
   isEditMode = false,
+  onStartEdit,
   onCancelEdit,
   onOpenHistory,
   onGoToDashboard,
@@ -311,15 +313,27 @@ export const TimRumdinForm: React.FC<TimRumdinFormProps> = ({
 
           {/* Tombol Aksi */}
           <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {onStartEdit && (
+              <button
+                type="button"
+                id="btn-start-edit-rumdin-locked"
+                onClick={onStartEdit}
+                className="px-5 py-3 rounded-xl font-extrabold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-blue-950/40 transition-all cursor-pointer"
+              >
+                <Edit3 className="w-4 h-4" />
+                <span>Buka Data untuk Mengedit & Mengupdate</span>
+              </button>
+            )}
+
             {onOpenHistory && (
               <button
                 type="button"
                 id="btn-open-history-rumdin-locked"
                 onClick={onOpenHistory}
-                className="px-5 py-3 rounded-xl font-extrabold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 shadow-lg shadow-blue-950/40 transition-all cursor-pointer"
+                className="px-4 py-3 rounded-xl font-bold text-xs sm:text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
-                <History className="w-4 h-4" />
-                <span>Buka Menu Riwayat untuk Edit & Update</span>
+                <History className="w-4 h-4 text-blue-400" />
+                <span>Menu Riwayat Laporan</span>
               </button>
             )}
 

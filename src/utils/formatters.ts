@@ -628,3 +628,58 @@ export function generateSampleReport(shift: ShiftType = 'MALAM'): CombinedShiftR
     updatedAt: new Date().toISOString(),
   };
 }
+
+export const INDONESIAN_DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] as const;
+
+export function getRealtimeBriefingInfo(date: Date = new Date()) {
+  const dayName = INDONESIAN_DAYS[date.getDay()];
+  const monthName = MONTH_NAMES[date.getMonth()].toLowerCase();
+  const dateStr = `${date.getDate()} ${monthName} ${date.getFullYear()}`;
+  const shiftType = getCurrentShift(date);
+  const shiftLabel = shiftType === 'PAGI' ? 'Pagi' : shiftType === 'SIANG' ? 'Siang' : 'Malam';
+  return {
+    day: dayName,
+    date: dateStr,
+    shift: shiftLabel,
+    shiftType,
+  };
+}
+
+export function formatBriefingWhatsAppText(params: {
+  day: string;
+  date: string;
+  shift: string;
+  wapresOfficers: [string, string];
+  rumdinOfficers: [string, string];
+  officerDb: Record<string, { fullName: string; phone: string }>;
+}): string {
+  const formatOfficer = (num: number, officerName: string) => {
+    if (!officerName) return `${num}. [Pilih Petugas]`;
+    const contact = params.officerDb[officerName];
+    if (contact) {
+      return `${num}. ${contact.fullName} (${contact.phone})`;
+    }
+    return `${num}. ${officerName}`;
+  };
+
+  return `*LAPORAN PETUGAS PIKET*
+*POSKO ISTANA WAKIL PRESIDEN DAN RUMAH DINAS WAKIL PRESIDEN / VVIP*
+==============================
+*Hari :* ${params.day}
+*Tanggal :* ${params.date}
+*Shift :* ${params.shift}
+
+*Istana Wakil Presiden :*
+${formatOfficer(1, params.wapresOfficers[0])}
+${formatOfficer(2, params.wapresOfficers[1])}
+
+*Rumah Dinas Wakil Presiden dan VVIP :*
+${formatOfficer(1, params.rumdinOfficers[0])}
+${formatOfficer(2, params.rumdinOfficers[1])}
+
+==============================
+*FOKUS BEKERJA*
+
+*Semoga Jaringan Aman dan Handal*
+*Amiiin* 🤲`;
+}

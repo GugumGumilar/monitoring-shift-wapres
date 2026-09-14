@@ -5,9 +5,8 @@ import {
   Zap,
   History,
   Send,
-  Sparkles,
   FileSpreadsheet,
-  Table,
+  MessageSquare,
 } from 'lucide-react';
 import { formatIndonesianDate, formatIndonesianTime } from '../utils/formatters';
 
@@ -26,6 +25,7 @@ interface HeaderProps {
   isSheetsConnected: boolean;
   onOpenShiftSchedule: () => void;
   onOpenSheetTable?: () => void;
+  onOpenBriefing?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,6 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
   isSheetsConnected,
   onOpenShiftSchedule,
   onOpenSheetTable,
+  onOpenBriefing,
 }) => {
   const [currentTime, setCurrentTime] = useState<string>(formatIndonesianTime());
   const [currentDate, setCurrentDate] = useState<string>(formatIndonesianDate());
@@ -96,18 +97,6 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Action buttons toolbar - scrollable or wrap nicely on mobile */}
           <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-            {/* Demo Button */}
-            <button
-              type="button"
-              id="btn-load-demo"
-              onClick={onLoadSample}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition-colors whitespace-nowrap cursor-pointer shrink-0"
-              title="Isi form dengan data contoh sesuai format WhatsApp"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Demo</span>
-            </button>
-
             {/* Google Sheets Sync Button */}
             <button
               type="button"
@@ -127,17 +116,17 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </button>
 
-            {/* Format Sheet Preview Button */}
-            {onOpenSheetTable && (
+            {/* Shift Briefing Button */}
+            {onOpenBriefing && (
               <button
                 type="button"
-                id="btn-header-format-sheet"
-                onClick={onOpenSheetTable}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all whitespace-nowrap cursor-pointer shrink-0"
-                title="Lihat Format Tabel Google Sheets (Persis Standar Resmi)"
+                id="btn-header-briefing"
+                onClick={onOpenBriefing}
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-amber-300 border border-amber-500/30 transition-colors whitespace-nowrap cursor-pointer shrink-0"
+                title="Shift Briefing: Pilih Petugas per Lokasi & Kirim WA"
               >
-                <Table className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">Tabel</span> Sheet
+                <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
+                <span>Briefing</span>
               </button>
             )}
 

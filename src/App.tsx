@@ -70,11 +70,13 @@ import {
   RefreshCw,
   Lock,
   AlertTriangle,
+  MessageSquare,
 } from 'lucide-react';
 import { fetchShiftDataFromSpreadsheet } from './services/sheetReader';
 import { validateShiftReport } from './utils/reportValidator';
 import { OfficerSelectionScreen } from './components/OfficerSelectionScreen';
 import { ShiftDashboardScreen } from './components/ShiftDashboardScreen';
+import { ShiftBriefingScreen } from './components/ShiftBriefingScreen';
 
 export default function App() {
   // Current real-time shift
@@ -83,8 +85,8 @@ export default function App() {
   const [selectedTeam, setSelectedTeam] = useState<'WAPRES' | 'RUMDIN'>('WAPRES');
   const [liveActiveShift, setLiveActiveShift] = useState<ShiftType>(() => getCurrentShift());
 
-  // Screen workflow state: 'OFFICER_SELECT' -> 'FORM' -> 'DASHBOARD'
-  const [currentScreen, setCurrentScreen] = useState<'OFFICER_SELECT' | 'FORM' | 'DASHBOARD'>('OFFICER_SELECT');
+  // Screen workflow state: 'OFFICER_SELECT' -> 'FORM' -> 'DASHBOARD' -> 'BRIEFING'
+  const [currentScreen, setCurrentScreen] = useState<'OFFICER_SELECT' | 'FORM' | 'DASHBOARD' | 'BRIEFING'>('OFFICER_SELECT');
   const [selectedOfficers, setSelectedOfficers] = useState<[string, string]>(() => {
     try {
       const saved = localStorage.getItem('monitoring_last_officers');
@@ -871,6 +873,37 @@ export default function App() {
     );
   };
 
+  const handleEditSubmittedReport = (team: 'WAPRES' | 'RUMDIN') => {
+    setSelectedTeam(team);
+    setIsEditMode(true);
+
+    if (team === 'WAPRES') {
+      const existingWapres =
+        activeCombinedForValidation.wapres || sheetStatus.wapres || currentReport?.wapres || wapresData;
+      if (existingWapres) {
+        setWapresData({ ...existingWapres });
+        if (existingWapres.officers && existingWapres.officers[0]) {
+          setSelectedOfficers([existingWapres.officers[0], existingWapres.officers[1] || '']);
+        }
+      }
+    } else {
+      const existingRumdin =
+        activeCombinedForValidation.rumdin || sheetStatus.rumdin || currentReport?.rumdin || rumdinData;
+      if (existingRumdin) {
+        setRumdinData({ ...existingRumdin });
+        if (existingRumdin.officers && existingRumdin.officers[0]) {
+          setSelectedOfficers([existingRumdin.officers[0], existingRumdin.officers[1] || '']);
+        }
+      }
+    }
+
+    setCurrentScreen('FORM');
+    showToast(
+      `✏️ Mode Edit & Update Aktif: Mengedit laporan Tim ${team === 'WAPRES' ? 'Wapres' : 'Rumdin'} (Shift ${selectedShift})`,
+      'info'
+    );
+  };
+
   const handleProceedFromOfficerSelection = (
     officer1: string,
     officer2: string,
@@ -1041,6 +1074,7 @@ export default function App() {
         isSheetsConnected={Boolean(directWebhookUrl || (currentUser && activeSpreadsheet))}
         onOpenShiftSchedule={() => setIsShiftScheduleOpen(true)}
         onOpenSheetTable={() => setIsSheetTableOpen(true)}
+        onOpenBriefing={() => setCurrentScreen('BRIEFING')}
       />
 
       {/* Workflow Navigation Bar */}
@@ -1061,8 +1095,13 @@ export default function App() {
               <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
                 currentScreen === 'OFFICER_SELECT' ? 'bg-amber-400 text-zinc-950 font-black' : 'bg-zinc-800 text-zinc-400'
               }`}>1</span>
-              <span className="hidden sm:inline">1. Pilih Petugas & Tim</span>
-              <span className="sm:hidden">1. Petugas</span>
+              <span className="hidden sm:inline">
+                1. Pilih Petugas & Tim
+                {isWapresSubmitted && isRumdinSubmitted ? ' 🔒' : ''}
+              </span>
+              <span className="sm:hidden">
+                1. Petugas {isWapresSubmitted && isRumdinSubmitted ? '🔒' : ''}
+              </span>
             </button>
 
             <span className="text-zinc-600 text-xs">→</span>
@@ -1076,22 +1115,36 @@ export default function App() {
                 currentScreen === 'FORM'
                   ? isEditMode
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shadow-xs'
+                    : (selectedTeam === 'WAPRES' ? isWapresSubmitted : isRumdinSubmitted)
+                    ? 'bg-zinc-800 text-zinc-300 border border-zinc-700 font-bold shadow-xs'
                     : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold shadow-xs'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
               }`}
             >
               <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
                 currentScreen === 'FORM'
-                  ? isEditMode ? 'bg-amber-400 text-zinc-950 font-black' : 'bg-emerald-400 text-zinc-950 font-black'
+                  ? isEditMode
+                    ? 'bg-amber-400 text-zinc-950 font-black'
+                    : (selectedTeam === 'WAPRES' ? isWapresSubmitted : isRumdinSubmitted)
+                    ? 'bg-zinc-700 text-zinc-300 font-black'
+                    : 'bg-emerald-400 text-zinc-950 font-black'
                   : 'bg-zinc-800 text-zinc-400'
               }`}>2</span>
               <span className="hidden sm:inline">
                 2. Form {selectedTeam === 'WAPRES' ? 'Tim Wapres' : 'Tim Rumdin'}
-                {isEditMode ? ' (Koreksi)' : ''}
+                {isEditMode
+                  ? ' (Edit & Update)'
+                    : (selectedTeam === 'WAPRES' ? isWapresSubmitted : isRumdinSubmitted)
+                    ? ' 🔒 (Terkunci)'
+                    : ''}
               </span>
               <span className="sm:hidden">
                 2. Form {selectedTeam === 'WAPRES' ? 'Wapres' : 'Rumdin'}
-                {isEditMode ? ' (Edit)' : ''}
+                {isEditMode
+                  ? ' (Edit)'
+                  : (selectedTeam === 'WAPRES' ? isWapresSubmitted : isRumdinSubmitted)
+                  ? ' 🔒'
+                  : ''}
               </span>
             </button>
 
@@ -1113,6 +1166,24 @@ export default function App() {
               }`}>3</span>
               <span className="hidden sm:inline">3. Dashboard Shift</span>
               <span className="sm:hidden">3. Dashboard</span>
+            </button>
+
+            <span className="text-zinc-700 text-xs mx-0.5">|</span>
+
+            {/* Shift Briefing Tab */}
+            <button
+              type="button"
+              id="nav-step-briefing"
+              onClick={() => setCurrentScreen('BRIEFING')}
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                currentScreen === 'BRIEFING'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shadow-xs'
+                  : 'text-zinc-400 hover:text-amber-300 hover:bg-zinc-800/60'
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Shift Briefing</span>
+              <span className="sm:hidden">Briefing</span>
             </button>
           </div>
 
@@ -1161,6 +1232,8 @@ export default function App() {
             onSelectTeam={(team) => setSelectedTeam(team)}
             onProceedToForm={handleProceedFromOfficerSelection}
             onGoToDashboard={() => setCurrentScreen('DASHBOARD')}
+            onGoToBriefing={() => setCurrentScreen('BRIEFING')}
+            onEditSubmittedReport={handleEditSubmittedReport}
             isWapresSubmitted={isWapresSubmitted}
             isRumdinSubmitted={isRumdinSubmitted}
           />
@@ -1182,10 +1255,12 @@ export default function App() {
               setSelectedTeam(team);
               setCurrentScreen('FORM');
             }}
+            onEditSubmittedReport={handleEditSubmittedReport}
             onOpenReportPreview={() => setIsPreviewOpen(true)}
             onOpenHistory={() => setIsHistoryOpen(true)}
             onOpenSheetsModal={() => setIsSheetsModalOpen(true)}
             onRefreshSheetStatus={() => checkSpreadsheetSubmission(false)}
+            onGoToBriefing={() => setCurrentScreen('BRIEFING')}
             isCheckingSheet={sheetStatus.isChecking}
             sheetStatusError={sheetStatus.error}
             sourceIndicator={
@@ -1404,6 +1479,7 @@ export default function App() {
                 shiftName={selectedShift}
                 isAlreadySubmitted={isWapresSubmitted}
                 isEditMode={isEditMode}
+                onStartEdit={() => handleEditSubmittedReport('WAPRES')}
                 onCancelEdit={() => setIsEditMode(false)}
                 onOpenHistory={() => setIsHistoryOpen(true)}
                 onGoToDashboard={() => setCurrentScreen('DASHBOARD')}
@@ -1430,6 +1506,7 @@ export default function App() {
                 shiftName={selectedShift}
                 isAlreadySubmitted={isRumdinSubmitted}
                 isEditMode={isEditMode}
+                onStartEdit={() => handleEditSubmittedReport('RUMDIN')}
                 onCancelEdit={() => setIsEditMode(false)}
                 onOpenHistory={() => setIsHistoryOpen(true)}
                 onGoToDashboard={() => setCurrentScreen('DASHBOARD')}
@@ -1452,6 +1529,17 @@ export default function App() {
               />
             )}
           </>
+        )}
+
+        {/* VIEW 4: Shift Briefing Petugas Piket & WhatsApp Generator */}
+        {currentScreen === 'BRIEFING' && (
+          <ShiftBriefingScreen
+            onGoToDashboard={() => setCurrentScreen('DASHBOARD')}
+            onGoToOfficers={() => setCurrentScreen('OFFICER_SELECT')}
+            currentWapresOfficers={activeCombinedForValidation.wapres?.officers || (selectedTeam === 'WAPRES' ? selectedOfficers : undefined)}
+            currentRumdinOfficers={activeCombinedForValidation.rumdin?.officers || (selectedTeam === 'RUMDIN' ? selectedOfficers : undefined)}
+            showToast={showToast}
+          />
         )}
       </main>
 
