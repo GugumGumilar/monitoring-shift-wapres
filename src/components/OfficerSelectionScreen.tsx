@@ -151,8 +151,15 @@ export const OfficerSelectionScreen: React.FC<OfficerSelectionScreenProps> = ({
                   ({shiftRange})
                 </span>
               </div>
-              <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5">
-                {currentDateStr} • <span className="font-mono text-zinc-200">{currentTimeStr}</span>
+              <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                <span>{currentDateStr}</span>
+                <span>•</span>
+                <span className="font-mono text-zinc-200">{currentTimeStr}</span>
+                {activeShift === 'MALAM' && new Date().getHours() < 8 && (
+                  <span className="text-[10px] text-amber-300 font-semibold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                    (Shift Malam Dimulai Kemarin 22.00)
+                  </span>
+                )}
               </p>
             </div>
           </div>

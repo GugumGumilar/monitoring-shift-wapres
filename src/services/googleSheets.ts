@@ -1,4 +1,5 @@
 import { TimWapresReport, TimRumdinReport, UPSData, ShiftType } from '../types';
+import { getShiftOperationalDate } from '../utils/formatters';
 
 export interface SheetTabMapping {
   acoTM?: string;
@@ -55,10 +56,35 @@ export function extractSpreadsheetId(input: string): string | null {
   return null;
 }
 
+const INDO_MONTH_TO_NUM: Record<string, string> = {
+  JAN: '01', JANUARI: '01', JANUARY: '01',
+  FEB: '02', FEBRUARI: '02', FEBRUARY: '02',
+  MAR: '03', MARET: '03', MARCH: '03',
+  APR: '04', APRIL: '04',
+  MEI: '05', MAY: '05',
+  JUN: '06', JUNI: '06', JUNE: '06',
+  JUL: '07', JULI: '07', JULY: '07',
+  AGU: '08', AGUSTUS: '08', AUG: '08', AUGUST: '08',
+  SEP: '09', SEPTEMBER: '09',
+  OKT: '10', OKTOBER: '10', OCT: '10', OCTOBER: '10',
+  NOV: '11', NOVEMBER: '11',
+  DES: '12', DESEMBER: '12', DEC: '12', DECEMBER: '12',
+};
+
 export function formatToDDMMYYYY(dateStrOrObj?: string | Date): string {
   if (typeof dateStrOrObj === 'string') {
     const trimmed = dateStrOrObj.trim();
     if (trimmed.includes('/')) return trimmed;
+    // Check "14 September 2026"
+    const matchIndo = trimmed.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+    if (matchIndo) {
+      const d = String(parseInt(matchIndo[1], 10)).padStart(2, '0');
+      const mStr = matchIndo[2].toUpperCase();
+      const y = matchIndo[3];
+      if (INDO_MONTH_TO_NUM[mStr]) {
+        return `${d}/${INDO_MONTH_TO_NUM[mStr]}/${y}`;
+      }
+    }
     if (trimmed.includes('-')) {
       const parts = trimmed.split('-');
       if (parts.length === 3 && parts[0].length === 4) {
@@ -74,7 +100,7 @@ export function formatToDDMMYYYY(dateStrOrObj?: string | Date): string {
       return `${day}/${month}/${year}`;
     }
   }
-  const date = dateStrOrObj instanceof Date ? dateStrOrObj : new Date();
+  const date = dateStrOrObj instanceof Date ? getShiftOperationalDate(dateStrOrObj) : getShiftOperationalDate();
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
@@ -84,6 +110,12 @@ export function formatToDDMMYYYY(dateStrOrObj?: string | Date): string {
 export function extractDayOfMonth(dateStrOrObj?: string | Date): number {
   if (typeof dateStrOrObj === 'string') {
     const trimmed = dateStrOrObj.trim();
+    // Check "14 September 2026"
+    const matchIndo = trimmed.match(/^(\d{1,2})\s+[A-Za-z]+\s+\d{4}/);
+    if (matchIndo) {
+      const d = parseInt(matchIndo[1], 10);
+      if (!isNaN(d) && d >= 1 && d <= 31) return d;
+    }
     if (trimmed.includes('-')) {
       const parts = trimmed.split('-');
       if (parts.length === 3 && parts[0].length === 4) {
@@ -101,7 +133,7 @@ export function extractDayOfMonth(dateStrOrObj?: string | Date): number {
       return parsed.getDate();
     }
   }
-  const date = dateStrOrObj instanceof Date ? dateStrOrObj : new Date();
+  const date = dateStrOrObj instanceof Date ? getShiftOperationalDate(dateStrOrObj) : getShiftOperationalDate();
   return date.getDate();
 }
 

@@ -48,18 +48,27 @@ export const ShiftBriefingScreen: React.FC<ShiftBriefingScreenProps> = ({
   const realtimeDefaults = getRealtimeBriefingInfo();
 
   const [day, setDay] = useState<string>(() => {
-    const saved = localStorage.getItem('monitoring_briefing_day');
-    return saved || realtimeDefaults.day;
+    const savedAuto = localStorage.getItem('monitoring_briefing_autosync');
+    if (savedAuto === 'false') {
+      return localStorage.getItem('monitoring_briefing_day') || realtimeDefaults.day;
+    }
+    return realtimeDefaults.day;
   });
 
   const [dateStr, setDateStr] = useState<string>(() => {
-    const saved = localStorage.getItem('monitoring_briefing_date');
-    return saved || realtimeDefaults.date;
+    const savedAuto = localStorage.getItem('monitoring_briefing_autosync');
+    if (savedAuto === 'false') {
+      return localStorage.getItem('monitoring_briefing_date') || realtimeDefaults.date;
+    }
+    return realtimeDefaults.date;
   });
 
   const [shift, setShift] = useState<string>(() => {
-    const saved = localStorage.getItem('monitoring_briefing_shift');
-    return saved || realtimeDefaults.shift;
+    const savedAuto = localStorage.getItem('monitoring_briefing_autosync');
+    if (savedAuto === 'false') {
+      return localStorage.getItem('monitoring_briefing_shift') || realtimeDefaults.shift;
+    }
+    return realtimeDefaults.shift;
   });
 
   // Helper to normalize legacy or current names to updated staff names

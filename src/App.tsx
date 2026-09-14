@@ -95,15 +95,20 @@ export default function App() {
     return ['', ''];
   });
 
+  const [isEditMode, setIsEditMode] = useState(false);
+
   useEffect(() => {
     const timer = setInterval(() => {
       const live = getCurrentShift();
       setLiveActiveShift(live);
-      // Auto-keep selectedShift updated to the real-time active shift if not overridden
-      setSelectedShift(live);
+      // Auto-keep selectedShift & selectedDateKey updated to the real-time active shift if not editing an older report
+      if (!isEditMode) {
+        setSelectedShift(live);
+        setSelectedDateKey(getDateKey());
+      }
     }, 15000);
     return () => clearInterval(timer);
-  }, []);
+  }, [isEditMode]);
 
   const isToday = selectedDateKey === getDateKey();
   const isShiftTimeAllowed = true;
@@ -172,7 +177,6 @@ export default function App() {
   // UI modals & toast
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(
     null
   );

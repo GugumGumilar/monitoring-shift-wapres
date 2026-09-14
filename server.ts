@@ -25,7 +25,13 @@ async function startServer() {
   app.post("/api/sheets/read-shift", async (req, res) => {
     try {
       const { webhookUrl, spreadsheetId, sheetLink, dayOfMonth, shift, dateKey, accessToken } = req.body;
-      const targetDay = Number(dayOfMonth) || (dateKey ? parseInt(String(dateKey).split('-')[2], 10) : new Date().getDate());
+      let defaultDay = new Date().getDate();
+      if (new Date().getHours() < 8) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        defaultDay = yesterday.getDate();
+      }
+      const targetDay = Number(dayOfMonth) || (dateKey ? parseInt(String(dateKey).split('-')[2], 10) : defaultDay);
       const targetShift = String(shift || 'PAGI').toUpperCase();
       const offset = targetShift === 'SIANG' ? 1 : targetShift === 'MALAM' ? 2 : 0;
 

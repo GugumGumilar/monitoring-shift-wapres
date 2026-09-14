@@ -15,11 +15,32 @@ export const MONTH_NAMES = [
   'Desember',
 ];
 
-export function formatIndonesianDate(date: Date = new Date()): string {
+export function getShiftOperationalDate(date: Date = new Date()): Date {
+  const opDate = new Date(date.getTime());
+  const hour = opDate.getHours();
+  // Shift Malam (22.00 - 07.59 WIB):
+  // Jika diakses/input data setelah lewat tengah malam (00.00 - 07.59 WIB),
+  // tanggal yang digunakan tetap mengacu pada tanggal shift dimulai (hari sebelumnya / kemarin).
+  if (hour < 8) {
+    opDate.setDate(opDate.getDate() - 1);
+  }
+  return opDate;
+}
+
+export function formatCalendarDate(date: Date = new Date()): string {
   const day = date.getDate();
   const month = MONTH_NAMES[date.getMonth()];
   const year = date.getFullYear();
   return `${day} ${month} ${year}`;
+}
+
+export function formatIndonesianDate(date?: Date, isRawCalendarDate: boolean = false): string {
+  if (isRawCalendarDate) {
+    const d = date || new Date();
+    return formatCalendarDate(d);
+  }
+  const d = date ? getShiftOperationalDate(date) : getShiftOperationalDate();
+  return formatCalendarDate(d);
 }
 
 /**
@@ -28,15 +49,15 @@ export function formatIndonesianDate(date: Date = new Date()): string {
  * into standard clean Indonesian date: "12 April 2026" / "13 September 2026".
  */
 export function normalizeIndonesianDate(inputDate?: any): string {
-  if (!inputDate) return formatIndonesianDate(new Date());
+  if (!inputDate) return formatIndonesianDate();
   if (inputDate instanceof Date) {
-    if (isNaN(inputDate.getTime())) return formatIndonesianDate(new Date());
-    return formatIndonesianDate(inputDate);
+    if (isNaN(inputDate.getTime())) return formatIndonesianDate();
+    return formatCalendarDate(inputDate);
   }
 
   const str = String(inputDate).trim();
   if (!str || str === '-' || str.toLowerCase() === 'null') {
-    return formatIndonesianDate(new Date());
+    return formatIndonesianDate();
   }
 
   // If already formatted like "12 April 2026" or "12 APRIL 2026"
@@ -89,17 +110,18 @@ export function normalizeIndonesianDate(inputDate?: any): string {
   // Parse strings like "Sun Sep 13 2026 00:00:00 GMT+0700 (中南半島時間)"
   const parsed = new Date(str);
   if (!isNaN(parsed.getTime())) {
-    return formatIndonesianDate(parsed);
+    return formatCalendarDate(parsed);
   }
 
   return str;
 }
 
 
-export function formatDDMMYYYY(date: Date = new Date()): string {
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
+export function formatDDMMYYYY(date?: Date, isRawCalendarDate: boolean = false): string {
+  const target = isRawCalendarDate ? (date || new Date()) : (date ? getShiftOperationalDate(date) : getShiftOperationalDate());
+  const day = String(target.getDate()).padStart(2, '0');
+  const month = String(target.getMonth() + 1).padStart(2, '0');
+  const year = target.getFullYear();
   return `${day}/${month}/${year}`;
 }
 
@@ -136,10 +158,11 @@ export function getShiftTimeRange(shift: ShiftType): string {
   }
 }
 
-export function getDateKey(date: Date = new Date()): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+export function getDateKey(date?: Date, isRawCalendarDate: boolean = false): string {
+  const target = isRawCalendarDate ? (date || new Date()) : (date ? getShiftOperationalDate(date) : getShiftOperationalDate());
+  const year = target.getFullYear();
+  const month = String(target.getMonth() + 1).padStart(2, '0');
+  const day = String(target.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
@@ -632,9 +655,10 @@ export function generateSampleReport(shift: ShiftType = 'MALAM'): CombinedShiftR
 export const INDONESIAN_DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] as const;
 
 export function getRealtimeBriefingInfo(date: Date = new Date()) {
-  const dayName = INDONESIAN_DAYS[date.getDay()];
-  const monthName = MONTH_NAMES[date.getMonth()].toLowerCase();
-  const dateStr = `${date.getDate()} ${monthName} ${date.getFullYear()}`;
+  const opDate = getShiftOperationalDate(date);
+  const dayName = INDONESIAN_DAYS[opDate.getDay()];
+  const monthName = MONTH_NAMES[opDate.getMonth()].toLowerCase();
+  const dateStr = `${opDate.getDate()} ${monthName} ${opDate.getFullYear()}`;
   const shiftType = getCurrentShift(date);
   const shiftLabel = shiftType === 'PAGI' ? 'Pagi' : shiftType === 'SIANG' ? 'Siang' : 'Malam';
   return {
