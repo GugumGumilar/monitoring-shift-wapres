@@ -274,10 +274,10 @@ export function createDefaultRumdinData(): TimRumdinReport {
  * Format string exactly as specified in the user prompt for WhatsApp
  */
 export function generateWhatsAppReport(report: CombinedShiftReport): string {
-  const parts: string[] = [];
+  const blocks: string[] = [];
 
   // Header
-  parts.push(`*LAPORAN MONITORING SHIFT ${report.shift}*`);
+  blocks.push(`*LAPORAN MONITORING SHIFT ${report.shift}*`);
 
   // SECTION: Tim Wapres
   if (report.wapres) {
@@ -287,115 +287,160 @@ export function generateWhatsAppReport(report: CombinedShiftReport): string {
       .map((n) => n.toUpperCase())
       .join(' , ');
 
-    parts.push('======================');
-    parts.push('*_Pantauan UPS Dan ACO TM Gardu D 126 SetWapres_*');
-    parts.push('======================');
-    parts.push('Nama petugas :');
-    parts.push(officersStr || '-');
-    parts.push('Tanggal :');
-    parts.push(normalizeIndonesianDate(w.inspectionDate || report.displayDate));
-    parts.push('Jam Inspeksi :');
-    parts.push(w.inspectionTime || formatIndonesianTime());
+    // Wapres Header Block
+    blocks.push(
+      [
+        '======================',
+        '*_Pantauan UPS Dan ACO TM Gardu D 126 SetWapres_*',
+        '======================',
+        '*Nama petugas* :',
+        officersStr || '-',
+        '*Tanggal* :',
+        normalizeIndonesianDate(w.inspectionDate || report.displayDate),
+        '*Jam Inspeksi* :',
+        w.inspectionTime || formatIndonesianTime(),
+      ].join('\n')
+    );
 
     // UPS 30 KVA
-    parts.push('======================');
-    parts.push('*_Pantauan Beban UPS 30 KVA_*');
-    parts.push('======================');
-    parts.push('BEBAN UPS 30 KVA :');
-    parts.push(`R : ${w.ups30.loadR || '0'} A`);
-    parts.push(`S : ${w.ups30.loadS || '0'} A`);
-    parts.push(`T : ${w.ups30.loadT || '0'} A`);
-    parts.push('Tegangan UPS (V) :');
-    parts.push(`R-N: ${w.ups30.voltRN || '0'} V`);
-    parts.push(`S-N: ${w.ups30.voltSN || '0'} V`);
-    parts.push(`T-N: ${w.ups30.voltTN || '0'} V`);
-    parts.push(`R-S: ${w.ups30.voltRS || '0'} V`);
-    parts.push(`R-T: ${w.ups30.voltRT || '0'} V`);
-    parts.push(`S-T: ${w.ups30.voltST || '0'} V`);
-    parts.push('Temperatur ups :');
-    parts.push(`${w.ups30.temperature || '0'} °C`);
-    parts.push('Alarm UPS :');
-    parts.push(w.ups30.alarm || 'NORMAL');
-    parts.push('Back Up Time UPS :');
-    parts.push(`Hours : ${formatHoursDisplay(w.ups30.backupHours, w.ups30.backupTotalMinutes)}`);
-    parts.push(`Minutes: ${formatMinutesDisplay(w.ups30.backupMinutes, w.ups30.backupTotalMinutes)}`);
-    parts.push('Keterangan :');
-    parts.push(w.ups30.keterangan || '-');
+    blocks.push(
+      [
+        '======================',
+        '*_Pantauan Beban UPS 30 KVA_*',
+        '======================',
+        '*BEBAN UPS 30 KVA* :',
+        `R : ${w.ups30.loadR || '0'} A`,
+        `S : ${w.ups30.loadS || '0'} A`,
+        `T : ${w.ups30.loadT || '0'} A`,
+        '',
+        '*Tegangan UPS (V)* :',
+        `R-N: ${w.ups30.voltRN || '0'} V`,
+        `S-N: ${w.ups30.voltSN || '0'} V`,
+        `T-N: ${w.ups30.voltTN || '0'} V`,
+        '',
+        `R-S: ${w.ups30.voltRS || '0'} V`,
+        `R-T: ${w.ups30.voltRT || '0'} V`,
+        `S-T: ${w.ups30.voltST || '0'} V`,
+        '',
+        '*Temperatur UPS* :',
+        `${w.ups30.temperature || '0'} °C`,
+        '',
+        '*Alarm UPS* :',
+        w.ups30.alarm || 'NORMAL',
+        '',
+        '*Back Up Time UPS* :',
+        `Hours : ${formatHoursDisplay(w.ups30.backupHours, w.ups30.backupTotalMinutes)}`,
+        `Minutes: ${formatMinutesDisplay(w.ups30.backupMinutes, w.ups30.backupTotalMinutes)}`,
+        '',
+        '*Keterangan* :',
+        w.ups30.keterangan || '-',
+      ].join('\n')
+    );
 
     // UPS 40 KVA
-    parts.push('======================');
-    parts.push('*_Pantauan Beban UPS 40 KVA_*');
-    parts.push('======================');
-    parts.push('BEBAN UPS 40 KVA :');
-    parts.push(`R : ${w.ups40.loadR || '0'} A`);
-    parts.push(`S : ${w.ups40.loadS || '0'} A`);
-    parts.push(`T : ${w.ups40.loadT || '0'} A`);
-    parts.push('Tegangan UPS (V) :');
-    parts.push(`R-N: ${w.ups40.voltRN || '0'} V`);
-    parts.push(`S-N: ${w.ups40.voltSN || '0'} V`);
-    parts.push(`T-N: ${w.ups40.voltTN || '0'} V`);
-    parts.push(`R-S: ${w.ups40.voltRS || '0'} V`);
-    parts.push(`R-T: ${w.ups40.voltRT || '0'} V`);
-    parts.push(`S-T: ${w.ups40.voltST || '0'} V`);
-    parts.push('Temperatur ups :');
-    parts.push(`${w.ups40.temperature || '0'} °C`);
-    parts.push('Alarm UPS :');
-    parts.push(w.ups40.alarm || 'NORMAL');
-    parts.push('Back Up Time UPS :');
-    parts.push(`Hours : ${formatHoursDisplay(w.ups40.backupHours, w.ups40.backupTotalMinutes)}`);
-    parts.push(`Minutes: ${formatMinutesDisplay(w.ups40.backupMinutes, w.ups40.backupTotalMinutes)}`);
-    parts.push('Keterangan :');
-    parts.push(w.ups40.keterangan || '-');
+    blocks.push(
+      [
+        '======================',
+        '*_Pantauan Beban UPS 40 KVA_*',
+        '======================',
+        '*BEBAN UPS 40 KVA* :',
+        `R : ${w.ups40.loadR || '0'} A`,
+        `S : ${w.ups40.loadS || '0'} A`,
+        `T : ${w.ups40.loadT || '0'} A`,
+        '',
+        '*Tegangan UPS (V)* :',
+        `R-N: ${w.ups40.voltRN || '0'} V`,
+        `S-N: ${w.ups40.voltSN || '0'} V`,
+        `T-N: ${w.ups40.voltTN || '0'} V`,
+        '',
+        `R-S: ${w.ups40.voltRS || '0'} V`,
+        `R-T: ${w.ups40.voltRT || '0'} V`,
+        `S-T: ${w.ups40.voltST || '0'} V`,
+        '',
+        '*Temperatur UPS* :',
+        `${w.ups40.temperature || '0'} °C`,
+        '',
+        '*Alarm UPS* :',
+        w.ups40.alarm || 'NORMAL',
+        '',
+        '*Back Up Time UPS* :',
+        `Hours : ${formatHoursDisplay(w.ups40.backupHours, w.ups40.backupTotalMinutes)}`,
+        `Minutes: ${formatMinutesDisplay(w.ups40.backupMinutes, w.ups40.backupTotalMinutes)}`,
+        '',
+        '*Keterangan* :',
+        w.ups40.keterangan || '-',
+      ].join('\n')
+    );
 
     // UPS 60 KVA
-    parts.push('======================');
-    parts.push('*_Pantauan Beban UPS 60 KVA_*');
-    parts.push('======================');
-    parts.push('BEBAN UPS 60 KVA :');
-    parts.push(`R : ${w.ups60.loadR || '0'} A`);
-    parts.push(`S : ${w.ups60.loadS || '0'} A`);
-    parts.push(`T : ${w.ups60.loadT || '0'} A`);
-    parts.push('Tegangan UPS (V) :');
-    parts.push(`R-N: ${w.ups60.voltRN || '0'} V`);
-    parts.push(`S-N: ${w.ups60.voltSN || '0'} V`);
-    parts.push(`T-N: ${w.ups60.voltTN || '0'} V`);
-    parts.push(`R-S: ${w.ups60.voltRS || '0'} V`);
-    parts.push(`R-T: ${w.ups60.voltRT || '0'} V`);
-    parts.push(`S-T: ${w.ups60.voltST || '0'} V`);
-    parts.push('Temperatur ups :');
-    parts.push(`${w.ups60.temperature || '0'} °C`);
-    parts.push('Alarm UPS :');
-    parts.push(w.ups60.alarm || 'NORMAL');
-    parts.push('Back Up Time UPS :');
-    parts.push(`Hours : ${formatHoursDisplay(w.ups60.backupHours, w.ups60.backupTotalMinutes)}`);
-    parts.push(`Minutes: ${formatMinutesDisplay(w.ups60.backupMinutes, w.ups60.backupTotalMinutes)}`);
-    parts.push('Keterangan :');
-    parts.push(w.ups60.keterangan || '-');
+    blocks.push(
+      [
+        '======================',
+        '*_Pantauan Beban UPS 60 KVA_*',
+        '======================',
+        '*BEBAN UPS 60 KVA* :',
+        `R : ${w.ups60.loadR || '0'} A`,
+        `S : ${w.ups60.loadS || '0'} A`,
+        `T : ${w.ups60.loadT || '0'} A`,
+        '',
+        '*Tegangan UPS (V)* :',
+        `R-N: ${w.ups60.voltRN || '0'} V`,
+        `S-N: ${w.ups60.voltSN || '0'} V`,
+        `T-N: ${w.ups60.voltTN || '0'} V`,
+        '',
+        `R-S: ${w.ups60.voltRS || '0'} V`,
+        `R-T: ${w.ups60.voltRT || '0'} V`,
+        `S-T: ${w.ups60.voltST || '0'} V`,
+        '',
+        '*Temperatur UPS* :',
+        `${w.ups60.temperature || '0'} °C`,
+        '',
+        '*Alarm UPS* :',
+        w.ups60.alarm || 'NORMAL',
+        '',
+        '*Back Up Time UPS* :',
+        `Hours : ${formatHoursDisplay(w.ups60.backupHours, w.ups60.backupTotalMinutes)}`,
+        `Minutes: ${formatMinutesDisplay(w.ups60.backupMinutes, w.ups60.backupTotalMinutes)}`,
+        '',
+        '*Keterangan* :',
+        w.ups60.keterangan || '-',
+      ].join('\n')
+    );
 
     // ACO TM Gardu D 126 SetWapres
-    parts.push('======================');
-    parts.push('*_Pantauan ACO TM Gardu D 126 SetWapres_*');
-    parts.push('======================');
-    parts.push('Status Penyulang :');
-    parts.push(`ClOSE ( // ) : ${w.acoTM.penyulangClose || '-'}`);
-    parts.push(`OPEN ( # ) : ${w.acoTM.penyulangOpen || '-'}`);
-    parts.push('Alarm Status :');
-    parts.push(`ALARM : ${w.acoTM.alarmStatus === 'ALARM' ? 'ALARM' : '-'}`);
-    parts.push(`NORMAL : ${w.acoTM.alarmStatus === 'NORMAL' ? 'NORMAL' : '-'}`);
-    parts.push('Power ACO :');
-    parts.push(`ON : ${w.acoTM.powerACO === 'ON' ? 'ON' : '-'}`);
-    parts.push(`OFF : ${w.acoTM.powerACO === 'OFF' ? 'OFF' : '-'}`);
-    parts.push('Status Charging Kubikel :');
-    parts.push(`Ya : ${w.acoTM.chargingKubikel === 'YA' ? 'YA' : '-'}`);
-    parts.push(`Tidak : ${w.acoTM.chargingKubikel === 'TIDAK' ? 'TIDAK' : '-'}`);
-    parts.push('Status Remote Kubikel :');
-    parts.push(`Local : ${w.acoTM.remoteKubikel === 'LOCAL' ? 'LOCAL' : '-'}`);
-    parts.push(`Auto : ${w.acoTM.remoteKubikel === 'AUTO' ? 'AUTO' : '-'}`);
-    parts.push('Lampu Indikator :');
-    parts.push(`On : ${w.acoTM.lampuIndikator === 'ON' ? 'ON' : '-'}`);
-    parts.push(`Off : ${w.acoTM.lampuIndikator === 'OFF' ? 'OFF' : '-'}`);
-    parts.push('Keterangan :');
-    parts.push(w.acoTM.keterangan || '-');
+    blocks.push(
+      [
+        '======================',
+        '*_Pantauan ACO TM Gardu D 126 SetWapres_*',
+        '======================',
+        '*Status Penyulang* :',
+        `*ClOSE ( // )* : ${w.acoTM.penyulangClose || '-'}`,
+        `*OPEN ( # )* : ${w.acoTM.penyulangOpen || '-'}`,
+        '',
+        '*Alarm Status* :',
+        `ALARM : ${w.acoTM.alarmStatus === 'ALARM' ? 'ALARM' : '-'}`,
+        `NORMAL : ${w.acoTM.alarmStatus === 'NORMAL' ? 'NORMAL' : '-'}`,
+        '',
+        '*Power ACO* :',
+        `ON : ${w.acoTM.powerACO === 'ON' ? 'ON' : '-'}`,
+        `OFF : ${w.acoTM.powerACO === 'OFF' ? 'OFF' : '-'}`,
+        '',
+        '*Status Charging Kubikel* :',
+        `Ya : ${w.acoTM.chargingKubikel === 'YA' ? 'YA' : '-'}`,
+        `Tidak : ${w.acoTM.chargingKubikel === 'TIDAK' ? 'TIDAK' : '-'}`,
+        '',
+        '*Status Remote Kubikel* :',
+        `Local : ${w.acoTM.remoteKubikel === 'LOCAL' ? 'LOCAL' : '-'}`,
+        `Auto : ${w.acoTM.remoteKubikel === 'AUTO' ? 'AUTO' : '-'}`,
+        '',
+        '*Lampu Indikator* :',
+        `On : ${w.acoTM.lampuIndikator === 'ON' ? 'ON' : '-'}`,
+        `Off : ${w.acoTM.lampuIndikator === 'OFF' ? 'OFF' : '-'}`,
+        '',
+        '*Keterangan* :',
+        w.acoTM.keterangan || '-',
+      ].join('\n')
+    );
   }
 
   // SECTION: Tim Rumdin
@@ -406,36 +451,49 @@ export function generateWhatsAppReport(report: CombinedShiftReport): string {
       .map((n) => n.toUpperCase())
       .join(' , ');
 
-    parts.push('=========================');
-    parts.push('*_Pantauan UPS Dan ACO TR Rumdin Wapres_*');
-    parts.push('=========================');
-    parts.push('Nama Petugas :');
-    parts.push(officersStr || '-');
-    parts.push('Tanggal :');
-    parts.push(normalizeIndonesianDate(r.inspectionDate || report.displayDate));
-    parts.push('Jam Inspeksi :');
-    parts.push(r.inspectionTime || formatIndonesianTime());
+    // Rumdin Header Block
+    blocks.push(
+      [
+        '=========================',
+        '*_Pantauan UPS Dan ACO TR Rumdin Wapres_*',
+        '=========================',
+        '*Nama Petugas* :',
+        officersStr || '-',
+        '*Tanggal* :',
+        normalizeIndonesianDate(r.inspectionDate || report.displayDate),
+        '*Jam Inspeksi* :',
+        r.inspectionTime || formatIndonesianTime(),
+      ].join('\n')
+    );
 
     // ACO TR Rumdin Wapres (Dipo)
-    parts.push('=========================');
-    parts.push('*_Pantauan UPS Dan ACO TR Rumdin Wapres (Dipo)_*');
-    parts.push('=========================');
-    parts.push('Status ACO TR :');
-    parts.push('Gardu T135');
-    parts.push(`Close ( // )/Open ( # ) : ${r.acoTRDipo.garduT135Status || '-'}`);
-    parts.push('Gardu T15N');
-    parts.push(`Close ( // ) /Open ( # ) : ${r.acoTRDipo.garduT15NStatus || '-'}`);
-    parts.push('Alarm Status :');
-    parts.push(`Alarm : ${r.acoTRDipo.alarmStatus === 'ALARM' ? 'ALARM' : '-'}`);
-    parts.push(`Normal : ${r.acoTRDipo.alarmStatus === 'NORMAL' ? 'NORMAL' : '-'}`);
-    parts.push('Status Power ACO TR (Dipo) :');
-    parts.push(`On : ${r.acoTRDipo.powerACO === 'ON' ? 'ON' : '-'}`);
-    parts.push(`OFF : ${r.acoTRDipo.powerACO === 'OFF' ? 'OFF' : '-'}`);
-    parts.push('Lampu Indikator :');
-    parts.push(`On : ${r.acoTRDipo.lampuIndikator === 'ON' ? 'ON' : '-'}`);
-    parts.push(`Off : ${r.acoTRDipo.lampuIndikator === 'OFF' ? 'OFF' : '-'}`);
-    parts.push('Keterangan :');
-    parts.push(r.acoTRDipo.keterangan || '-');
+    blocks.push(
+      [
+        '=========================',
+        '*_Pantauan UPS Dan ACO TR Rumdin Wapres (Dipo)_*',
+        '=========================',
+        '*Status ACO TR* :',
+        'Gardu T135',
+        `Close ( // )/Open ( # ) : ${r.acoTRDipo.garduT135Status || '-'}`,
+        'Gardu T15N',
+        `Close ( // ) /Open ( # ) : ${r.acoTRDipo.garduT15NStatus || '-'}`,
+        '',
+        '*Alarm Status* :',
+        `Alarm : ${r.acoTRDipo.alarmStatus === 'ALARM' ? 'ALARM' : '-'}`,
+        `Normal : ${r.acoTRDipo.alarmStatus === 'NORMAL' ? 'NORMAL' : '-'}`,
+        '',
+        '*Status Power ACO TR (Dipo)* :',
+        `On : ${r.acoTRDipo.powerACO === 'ON' ? 'ON' : '-'}`,
+        `OFF : ${r.acoTRDipo.powerACO === 'OFF' ? 'OFF' : '-'}`,
+        '',
+        '*Lampu Indikator* :',
+        `On : ${r.acoTRDipo.lampuIndikator === 'ON' ? 'ON' : '-'}`,
+        `Off : ${r.acoTRDipo.lampuIndikator === 'OFF' ? 'OFF' : '-'}`,
+        '',
+        '*Keterangan* :',
+        r.acoTRDipo.keterangan || '-',
+      ].join('\n')
+    );
 
     // ACO TR Rumdin Wapres (ST12)
     const t93Status =
@@ -445,79 +503,118 @@ export function generateWhatsAppReport(report: CombinedShiftReport): string {
       r.acoTRST12.garduT10BStatus ||
       (r.acoTRST12.penyulangOpen?.includes('T10B') ? 'OPEN' : 'CLOSE');
 
-    parts.push('=========================');
-    parts.push('*_Pantauan Inpeksi ACO TR Rumdin Wapres (ST12)_*');
-    parts.push('=========================');
-    parts.push('Status ACO TR :');
-    parts.push('Gardu T93');
-    parts.push(`Close ( // )/Open ( # ) : ${t93Status}`);
-    parts.push('Gardu T10B');
-    parts.push(`Close ( // ) /Open ( # ) : ${t10BStatus}`);
-    parts.push('Alarm Status :');
-    parts.push(`Alarm : ${r.acoTRST12.alarmStatus === 'ALARM' ? 'ALARM' : '-'}`);
-    parts.push(`Normal : ${r.acoTRST12.alarmStatus === 'NORMAL' ? 'NORMAL' : '-'}`);
-    parts.push('Status Power ACO TR ST 12 :');
-    parts.push(`On : ${r.acoTRST12.powerACO === 'ON' ? 'ON' : '-'}`);
-    parts.push(`Off : ${r.acoTRST12.powerACO === 'OFF' ? 'OFF' : '-'}`);
-    parts.push('Lampu Indikator :');
-    parts.push(`On : ${r.acoTRST12.lampuIndikator === 'ON' ? 'ON' : '-'}`);
-    parts.push(`Off : ${r.acoTRST12.lampuIndikator === 'OFF' ? 'OFF' : '-'}`);
-    parts.push('Keterangan :');
-    parts.push(r.acoTRST12.keterangan || '-');
+    blocks.push(
+      [
+        '=========================',
+        '*_Pantauan Inpeksi ACO TR Rumdin Wapres (ST12)_*',
+        '=========================',
+        '*Status ACO TR* :',
+        'Gardu T93',
+        `Close ( // )/Open ( # ) : ${t93Status}`,
+        'Gardu T10B',
+        `Close ( // ) /Open ( # ) : ${t10BStatus}`,
+        '',
+        '*Alarm Status* :',
+        `Alarm : ${r.acoTRST12.alarmStatus === 'ALARM' ? 'ALARM' : '-'}`,
+        `Normal : ${r.acoTRST12.alarmStatus === 'NORMAL' ? 'NORMAL' : '-'}`,
+        '',
+        '*Status Power ACO TR ST 12* :',
+        `On : ${r.acoTRST12.powerACO === 'ON' ? 'ON' : '-'}`,
+        `Off : ${r.acoTRST12.powerACO === 'OFF' ? 'OFF' : '-'}`,
+        '',
+        '*Lampu Indikator* :',
+        `On : ${r.acoTRST12.lampuIndikator === 'ON' ? 'ON' : '-'}`,
+        `Off : ${r.acoTRST12.lampuIndikator === 'OFF' ? 'OFF' : '-'}`,
+        '',
+        '*Keterangan* :',
+        r.acoTRST12.keterangan || '-',
+      ].join('\n')
+    );
 
     // UPS 40 KVA RUMDIN (Dipo)
-    parts.push('======================');
-    parts.push('*_Pantauan Beban UPS 40 KVA RUMDIN (Dipo)_*');
-    parts.push('======================');
-    parts.push(`R: ${r.ups40Dipo.loadR || '0'} A`);
-    parts.push(`S: ${r.ups40Dipo.loadS || '0'} A`);
-    parts.push(`T: ${r.ups40Dipo.loadT || '0'} A`);
-    parts.push('Tegangan UPS (V) :');
-    parts.push(`R-N: ${r.ups40Dipo.voltRN || '0'} V`);
-    parts.push(`S-N: ${r.ups40Dipo.voltSN || '0'} V`);
-    parts.push(`T-N: ${r.ups40Dipo.voltTN || '0'} V`);
-    parts.push(`R-S: ${r.ups40Dipo.voltRS || '0'} V`);
-    parts.push(`R-T: ${r.ups40Dipo.voltRT || '0'} V`);
-    parts.push(`S-T: ${r.ups40Dipo.voltST || '0'} V`);
-    parts.push('Temperatur ups :');
-    parts.push(`${r.ups40Dipo.temperature || '0'} °C`);
-    parts.push('Alarm UPS :');
-    parts.push(r.ups40Dipo.alarm || 'NORMAL');
-    parts.push('Back Up Time UPS :');
-    parts.push(`Hours : ${formatHoursDisplay(r.ups40Dipo.backupHours, r.ups40Dipo.backupTotalMinutes)}`);
-    parts.push(`Minutes: ${formatMinutesDisplay(r.ups40Dipo.backupMinutes, r.ups40Dipo.backupTotalMinutes)}`);
-    parts.push('Keterangan :');
-    parts.push(r.ups40Dipo.keterangan || '-');
+    blocks.push(
+      [
+        '======================',
+        '*_Pantauan Beban UPS 40 KVA RUMDIN (Dipo)_*',
+        '======================',
+        '*BEBAN UPS 40 KVA (Dipo)* :',
+        `R: ${r.ups40Dipo.loadR || '0'} A`,
+        `S: ${r.ups40Dipo.loadS || '0'} A`,
+        `T: ${r.ups40Dipo.loadT || '0'} A`,
+        '',
+        '*Tegangan UPS (V)* :',
+        `R-N: ${r.ups40Dipo.voltRN || '0'} V`,
+        `S-N: ${r.ups40Dipo.voltSN || '0'} V`,
+        `T-N: ${r.ups40Dipo.voltTN || '0'} V`,
+        '',
+        `R-S: ${r.ups40Dipo.voltRS || '0'} V`,
+        `R-T: ${r.ups40Dipo.voltRT || '0'} V`,
+        `S-T: ${r.ups40Dipo.voltST || '0'} V`,
+        '',
+        '*Temperatur UPS* :',
+        `${r.ups40Dipo.temperature || '0'} °C`,
+        '',
+        '*Alarm UPS* :',
+        r.ups40Dipo.alarm || 'NORMAL',
+        '',
+        '*Back Up Time UPS* :',
+        `Hours : ${formatHoursDisplay(r.ups40Dipo.backupHours, r.ups40Dipo.backupTotalMinutes)}`,
+        `Minutes: ${formatMinutesDisplay(r.ups40Dipo.backupMinutes, r.ups40Dipo.backupTotalMinutes)}`,
+        '',
+        '*Keterangan* :',
+        r.ups40Dipo.keterangan || '-',
+      ].join('\n')
+    );
 
     // UPS 100 KVA RUMDIN (ST12)
-    parts.push('======================');
-    parts.push('*_Pantauan Beban UPS 100 KVA RUMDIN (ST12)_*');
-    parts.push('======================');
-    parts.push(`R: ${r.ups100ST12.loadR || '0'} A`);
-    parts.push(`S: ${r.ups100ST12.loadS || '0'} A`);
-    parts.push(`T: ${r.ups100ST12.loadT || '0'} A`);
-    parts.push('Tegangan UPS (V) :');
-    parts.push(`R-N: ${r.ups100ST12.voltRN || '0'} V`);
-    parts.push(`S-N: ${r.ups100ST12.voltSN || '0'} V`);
-    parts.push(`T-N: ${r.ups100ST12.voltTN || '0'} V`);
-    parts.push(`R-S: ${r.ups100ST12.voltRS || '0'} V`);
-    parts.push(`R-T: ${r.ups100ST12.voltRT || '0'} V`);
-    parts.push(`S-T: ${r.ups100ST12.voltST || '0'} V`);
-    parts.push('Temperatur ups :');
-    parts.push(`${r.ups100ST12.temperature || '0'} °C`);
-    parts.push('Alarm UPS :');
-    parts.push(r.ups100ST12.alarm || 'NORMAL');
-    parts.push('Back Up Time UPS :');
-    parts.push(`Hours : ${formatHoursDisplay(r.ups100ST12.backupHours, r.ups100ST12.backupTotalMinutes)}`);
-    parts.push(`Minutes: ${formatMinutesDisplay(r.ups100ST12.backupMinutes, r.ups100ST12.backupTotalMinutes)}`);
-    parts.push('Keterangan :');
-    parts.push(r.ups100ST12.keterangan || '-');
+    blocks.push(
+      [
+        '======================',
+        '*_Pantauan Beban UPS 100 KVA RUMDIN (ST12)_*',
+        '======================',
+        '*BEBAN UPS 100 KVA (ST12)* :',
+        `R: ${r.ups100ST12.loadR || '0'} A`,
+        `S: ${r.ups100ST12.loadS || '0'} A`,
+        `T: ${r.ups100ST12.loadT || '0'} A`,
+        '',
+        '*Tegangan UPS (V)* :',
+        `R-N: ${r.ups100ST12.voltRN || '0'} V`,
+        `S-N: ${r.ups100ST12.voltSN || '0'} V`,
+        `T-N: ${r.ups100ST12.voltTN || '0'} V`,
+        '',
+        `R-S: ${r.ups100ST12.voltRS || '0'} V`,
+        `R-T: ${r.ups100ST12.voltRT || '0'} V`,
+        `S-T: ${r.ups100ST12.voltST || '0'} V`,
+        '',
+        '*Temperatur UPS* :',
+        `${r.ups100ST12.temperature || '0'} °C`,
+        '',
+        '*Alarm UPS* :',
+        r.ups100ST12.alarm || 'NORMAL',
+        '',
+        '*Back Up Time UPS* :',
+        `Hours : ${formatHoursDisplay(r.ups100ST12.backupHours, r.ups100ST12.backupTotalMinutes)}`,
+        `Minutes: ${formatMinutesDisplay(r.ups100ST12.backupMinutes, r.ups100ST12.backupTotalMinutes)}`,
+        '',
+        '*Keterangan* :',
+        r.ups100ST12.keterangan || '-',
+      ].join('\n')
+    );
   }
 
   // Footer
-  parts.push('*_Terimakasih_*');
+  blocks.push(
+    [
+      '==============================',
+      '*FOKUS BEKERJA*',
+      '',
+      '*Semoga Jaringan Aman dan Handal*',
+      '*Amiiin* 🤲',
+      '*_Terimakasih_*',
+    ].join('\n')
+  );
 
-  return parts.join('\n');
+  return blocks.join('\n\n');
 }
 
 export function generateSampleReport(shift: ShiftType = 'MALAM'): CombinedShiftReport {
